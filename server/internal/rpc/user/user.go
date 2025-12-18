@@ -480,9 +480,6 @@ func (s *userServer) AddNotificationAccount(ctx context.Context, req *pbuser.Add
 	if err := authverify.CheckAdmin(ctx, s.config.Share.IMAdminUserID); err != nil {
 		return nil, err
 	}
-	if req.AppMangerLevel < constant.AppNotificationAdmin {
-		return nil, errs.ErrArgs.WithDetail("app level not supported")
-	}
 	if req.UserID == "" {
 		for i := 0; i < 20; i++ {
 			userId := s.genUserID()
@@ -508,17 +505,16 @@ func (s *userServer) AddNotificationAccount(ctx context.Context, req *pbuser.Add
 		Nickname:       req.NickName,
 		FaceURL:        req.FaceURL,
 		CreateTime:     time.Now(),
-		AppMangerLevel: req.AppMangerLevel,
+		AppMangerLevel: constant.AppNotificationAdmin,
 	}
 	if err := s.db.Create(ctx, []*tablerelation.User{user}); err != nil {
 		return nil, err
 	}
 
 	return &pbuser.AddNotificationAccountResp{
-		UserID:         req.UserID,
-		NickName:       req.NickName,
-		FaceURL:        req.FaceURL,
-		AppMangerLevel: req.AppMangerLevel,
+		UserID:   req.UserID,
+		NickName: req.NickName,
+		FaceURL:  req.FaceURL,
 	}, nil
 }
 
@@ -599,12 +595,7 @@ func (s *userServer) GetNotificationAccount(ctx context.Context, req *pbuser.Get
 		return nil, servererrs.ErrUserIDNotFound.Wrap()
 	}
 	if user.AppMangerLevel == constant.AppAdmin || user.AppMangerLevel >= constant.AppNotificationAdmin {
-		return &pbuser.GetNotificationAccountResp{Account: &pbuser.NotificationAccountInfo{
-			UserID:         user.UserID,
-			FaceURL:        user.FaceURL,
-			NickName:       user.Nickname,
-			AppMangerLevel: user.AppMangerLevel,
-		}}, nil
+		return &pbuser.GetNotificationAccountResp{}, nil
 	}
 
 	return nil, errs.ErrNoPermission.WrapMsg("notification messages cannot be sent for this ID")
@@ -631,10 +622,9 @@ func (s *userServer) userModelToResp(users []*tablerelation.User, pagination pag
 	for _, v := range users {
 		if v.AppMangerLevel >= constant.AppNotificationAdmin && !datautil.Contain(v.UserID, s.config.Share.IMAdminUserID...) {
 			temp := &pbuser.NotificationAccountInfo{
-				UserID:         v.UserID,
-				FaceURL:        v.FaceURL,
-				NickName:       v.Nickname,
-				AppMangerLevel: v.AppMangerLevel,
+				UserID:   v.UserID,
+				FaceURL:  v.FaceURL,
+				NickName: v.Nickname,
 			}
 			accounts = append(accounts, temp)
 			total += 1
