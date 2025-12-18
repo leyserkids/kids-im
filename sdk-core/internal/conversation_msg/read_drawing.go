@@ -283,3 +283,36 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 	}
 	return nil
 }
+
+// doGroupReadDrawing handles group read receipt notifications
+func (c *Conversation) doGroupReadDrawing(ctx context.Context, msg *sdkws.MsgData) error {
+	tips := &sdkws.GroupHasReadTips{}
+	err := utils.UnmarshalNotificationElem(msg.Content, tips)
+	if err != nil {
+		log.ZWarn(ctx, "UnmarshalNotificationElem err", err, "msg", msg)
+		return err
+	}
+	log.ZDebug(ctx, "do groupReadDrawing", "tips", tips)
+
+	// Update local group read cursor
+	cursor := &model_struct.LocalGroupReadCursor{
+		ConversationID: tips.ConversationID,
+		UserID:         tips.UserID,
+		MaxReadSeq:     tips.HasReadSeq,
+	}
+	if err := c.db.UpsertGroupReadCursor(ctx, cursor); err != nil {
+		log.ZWarn(ctx, "UpsertGroupReadCursor err", err, "cursor", cursor)
+		return err
+	}
+
+	// Notify listeners about group read receipt update
+	readReceipt := &sdk_struct.GroupMessageReceipt{
+		GroupID:        tips.GroupID,
+		ConversationID: tips.ConversationID,
+		UserID:         tips.UserID,
+		HasReadSeq:     tips.HasReadSeq,
+	}
+	c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(readReceipt))
+
+	return nil
+}

@@ -332,3 +332,15 @@ type LocalAppSDKVersion struct {
 func (LocalAppSDKVersion) TableName() string {
 	return "local_app_sdk_version"
 }
+
+// LocalGroupReadCursor stores the read cursor (max read seq) for each user in a group conversation
+type LocalGroupReadCursor struct {
+	ConversationID string `gorm:"column:conversation_id;primary_key;type:varchar(128)" json:"conversationID"`
+	UserID         string `gorm:"column:user_id;primary_key;type:varchar(64)" json:"userID"`
+	MaxReadSeq     int64  `gorm:"column:max_read_seq" json:"maxReadSeq"`
+	CursorVersion  int64  `gorm:"column:cursor_version" json:"cursorVersion"`
+}
+
+func (LocalGroupReadCursor) TableName() string {
+	return "local_group_read_cursors"
+}

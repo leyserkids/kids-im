@@ -71,3 +71,9 @@ func (c *Conversation) getIncrementalConversationFromServer(ctx context.Context,
 	req := &pbConversation.GetIncrementalConversationReq{UserID: c.loginUserID, Version: version, VersionID: versionID}
 	return api.GetIncrementalConversation.Invoke(ctx, req)
 }
+
+// getConversationReadCursorsFromServer gets group read cursors for the given conversations
+func (c *Conversation) getConversationReadCursorsFromServer(ctx context.Context, conversationIDs []string) (*pbConversation.GetConversationReadCursorsResp, error) {
+	req := &pbConversation.GetConversationReadCursorsReq{ConversationIDs: conversationIDs}
+	return api.GetConversationReadCursors.Invoke(ctx, req)
+}

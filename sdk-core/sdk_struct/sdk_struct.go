@@ -29,6 +29,14 @@ type MessageReceipt struct {
 	ContentType int32    `json:"contentType"`
 	SessionType int32    `json:"sessionType"`
 }
+
+// GroupMessageReceipt represents a group member's read receipt for group messages
+type GroupMessageReceipt struct {
+	GroupID        string `json:"groupID"`
+	ConversationID string `json:"conversationID"`
+	UserID         string `json:"userID"`
+	HasReadSeq     int64  `json:"hasReadSeq"`
+}
 type MessageRevoked struct {
 	RevokerID                   string `json:"revokerID"`
 	RevokerRole                 int32  `json:"revokerRole"`

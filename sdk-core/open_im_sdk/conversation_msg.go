@@ -224,3 +224,13 @@ func ChangeInputStates(callback open_im_sdk_callback.Base, operationID string, c
 func GetInputStates(callback open_im_sdk_callback.Base, operationID string, conversationID string, userID string) {
 	call(callback, operationID, UserForSDK.Conversation().GetInputStates, conversationID, userID)
 }
+
+// GetGroupMessageReaderList returns the list of users who have read messages up to the given seq
+func GetGroupMessageReaderList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64) {
+	call(callback, operationID, UserForSDK.Conversation().GetGroupMessageReaderList, conversationID, seq)
+}
+
+// GetGroupMessageReadMemberList returns the list of users who have read messages up to the given seq, optionally syncing from server
+func GetGroupMessageReadMemberList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64, syncFromServer bool) {
+	call(callback, operationID, UserForSDK.Conversation().GetGroupMessageReadMemberList, conversationID, seq, syncFromServer)
+}

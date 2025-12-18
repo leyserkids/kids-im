@@ -134,3 +134,35 @@ func (c *Conversation) SyncAllConversationHashReadSeqs(ctx context.Context) erro
 	log.ZDebug(ctx, "SyncAllConversationHashReadSeqs completed", "totalDuration", time.Since(startTime).Seconds())
 	return nil
 }
+
+// SyncGroupReadCursors syncs group read cursors for the specified conversations
+func (c *Conversation) SyncGroupReadCursors(ctx context.Context, conversationIDs []string) error {
+	if len(conversationIDs) == 0 {
+		return nil
+	}
+	startTime := time.Now()
+	log.ZDebug(ctx, "start SyncGroupReadCursors", "conversationIDs", conversationIDs)
+
+	resp, err := c.getConversationReadCursorsFromServer(ctx, conversationIDs)
+	if err != nil {
+		log.ZWarn(ctx, "getConversationReadCursorsFromServer err", err, "conversationIDs", conversationIDs)
+		return err
+	}
+
+	for _, convCursors := range resp.ConversationReadCursors {
+		for _, cursor := range convCursors.Cursors {
+			localCursor := &model_struct.LocalGroupReadCursor{
+				ConversationID: convCursors.ConversationID,
+				UserID:         cursor.UserID,
+				MaxReadSeq:     cursor.MaxReadSeq,
+				CursorVersion:  convCursors.CursorVersion,
+			}
+			if err := c.db.UpsertGroupReadCursor(ctx, localCursor); err != nil {
+				log.ZWarn(ctx, "UpsertGroupReadCursor err", err, "cursor", localCursor)
+			}
+		}
+	}
+
+	log.ZDebug(ctx, "SyncGroupReadCursors completed", "totalDuration", time.Since(startTime).Seconds())
+	return nil
+}

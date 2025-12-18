@@ -196,6 +196,16 @@ type AppSDKVersion interface {
 type TableMaster interface {
 	GetExistTables(ctx context.Context) ([]string, error)
 }
+
+type GroupReadCursorModel interface {
+	GetGroupReadCursors(ctx context.Context, conversationID string) ([]*model_struct.LocalGroupReadCursor, error)
+	GetGroupReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalGroupReadCursor, error)
+	UpsertGroupReadCursor(ctx context.Context, cursor *model_struct.LocalGroupReadCursor) error
+	BatchUpsertGroupReadCursors(ctx context.Context, cursors []*model_struct.LocalGroupReadCursor) error
+	DeleteGroupReadCursors(ctx context.Context, conversationID string) error
+	GetGroupReadCursorsVersion(ctx context.Context, conversationID string) (int64, error)
+}
+
 type DataBase interface {
 	Close(ctx context.Context) error
 	InitDB(ctx context.Context, userID string, dataDir string) error
@@ -209,4 +219,5 @@ type DataBase interface {
 	VersionSyncModel
 	AppSDKVersion
 	TableMaster
+	GroupReadCursorModel
 }

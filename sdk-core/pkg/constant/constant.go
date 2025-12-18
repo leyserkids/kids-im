@@ -125,7 +125,8 @@ const (
 
 	DeleteMsgsNotification = 2102
 
-	HasReadReceipt = 2200
+	HasReadReceipt      = 2200
+	GroupHasReadReceipt = 2201
 
 	NotificationEnd = 5000
 	////////////////////////////////////////

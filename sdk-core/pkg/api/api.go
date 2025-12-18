@@ -86,12 +86,13 @@ var (
 )
 
 var (
-	GetConversations           = newApi[conversation.GetConversationsReq, conversation.GetConversationsResp]("/conversation/get_conversations")
-	GetAllConversations        = newApi[conversation.GetAllConversationsReq, conversation.GetAllConversationsResp]("/conversation/get_all_conversations")
-	SetConversations           = newApi[conversation.SetConversationsReq, conversation.SetConversationsResp]("/conversation/set_conversations")
-	GetIncrementalConversation = newApi[conversation.GetIncrementalConversationReq, conversation.GetIncrementalConversationResp]("/conversation/get_incremental_conversations")
-	GetFullConversationIDs     = newApi[conversation.GetFullOwnerConversationIDsReq, conversation.GetFullOwnerConversationIDsResp]("/conversation/get_full_conversation_ids")
-	GetOwnerConversation       = newApi[conversation.GetOwnerConversationReq, conversation.GetOwnerConversationResp]("/conversation/get_owner_conversation")
+	GetConversations            = newApi[conversation.GetConversationsReq, conversation.GetConversationsResp]("/conversation/get_conversations")
+	GetAllConversations         = newApi[conversation.GetAllConversationsReq, conversation.GetAllConversationsResp]("/conversation/get_all_conversations")
+	SetConversations            = newApi[conversation.SetConversationsReq, conversation.SetConversationsResp]("/conversation/set_conversations")
+	GetIncrementalConversation  = newApi[conversation.GetIncrementalConversationReq, conversation.GetIncrementalConversationResp]("/conversation/get_incremental_conversations")
+	GetFullConversationIDs      = newApi[conversation.GetFullOwnerConversationIDsReq, conversation.GetFullOwnerConversationIDsResp]("/conversation/get_full_conversation_ids")
+	GetOwnerConversation        = newApi[conversation.GetOwnerConversationReq, conversation.GetOwnerConversationResp]("/conversation/get_owner_conversation")
+	GetConversationReadCursors  = newApi[conversation.GetConversationReadCursorsReq, conversation.GetConversationReadCursorsResp]("/conversation/get_conversation_read_cursors")
 )
 
 var (

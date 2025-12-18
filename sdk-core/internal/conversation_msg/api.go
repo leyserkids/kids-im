@@ -998,3 +998,39 @@ func (c *Conversation) GetInputStates(ctx context.Context, conversationID string
 func (c *Conversation) ChangeInputStates(ctx context.Context, conversationID string, focus bool) error {
 	return c.typing.ChangeInputStates(ctx, conversationID, focus)
 }
+
+// GetGroupMessageReaderList returns the list of users who have read the group messages
+// for a specific conversation. It fetches from local cache first, then from server if needed.
+func (c *Conversation) GetGroupMessageReaderList(ctx context.Context, conversationID string, seq int64) ([]*sdk_struct.GroupMessageReceipt, error) {
+	// First try to get from local database
+	cursors, err := c.db.GetGroupReadCursors(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*sdk_struct.GroupMessageReceipt
+	for _, cursor := range cursors {
+		if cursor.MaxReadSeq >= seq {
+			result = append(result, &sdk_struct.GroupMessageReceipt{
+				ConversationID: cursor.ConversationID,
+				UserID:         cursor.UserID,
+				HasReadSeq:     cursor.MaxReadSeq,
+			})
+		}
+	}
+	return result, nil
+}
+
+// GetGroupMessageReadMemberList returns the list of users who have read messages
+// up to the specified sequence number in a group conversation.
+// This method syncs with server to get the latest read cursors.
+func (c *Conversation) GetGroupMessageReadMemberList(ctx context.Context, conversationID string, seq int64, syncFromServer bool) ([]*sdk_struct.GroupMessageReceipt, error) {
+	if syncFromServer {
+		// Sync from server first
+		if err := c.SyncGroupReadCursors(ctx, []string{conversationID}); err != nil {
+			return nil, err
+		}
+	}
+
+	return c.GetGroupMessageReaderList(ctx, conversationID, seq)
+}
