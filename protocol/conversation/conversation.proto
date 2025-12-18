@@ -296,6 +296,29 @@ message GetPinnedConversationIDsResp {
   repeated string conversationIDs = 1;
 }
 
+// Group read cursor for tracking read status per user
+message GroupReadCursor {
+  string userID = 1;
+  int64 maxReadSeq = 2;
+}
+
+// Request to get conversation read cursors
+message GetConversationReadCursorsReq {
+  repeated string conversationIDs = 1;
+}
+
+// Read cursors for a single conversation
+message ConversationReadCursors {
+  string conversationID = 1;
+  repeated GroupReadCursor cursors = 2;
+  int64 cursorVersion = 3;
+}
+
+// Response containing read cursors for multiple conversations
+message GetConversationReadCursorsResp {
+  repeated ConversationReadCursors conversationReadCursors = 1;
+}
+
 message ClearUserConversationMsgReq {
   int64 timestamp = 1;
   int32 limit = 2;
@@ -329,4 +352,5 @@ service conversation {
   rpc GetNotNotifyConversationIDs(GetNotNotifyConversationIDsReq) returns (GetNotNotifyConversationIDsResp);
   rpc GetPinnedConversationIDs(GetPinnedConversationIDsReq) returns (GetPinnedConversationIDsResp);
   rpc ClearUserConversationMsg(ClearUserConversationMsgReq) returns (ClearUserConversationMsgResp);
+  rpc GetConversationReadCursors(GetConversationReadCursorsReq) returns (GetConversationReadCursorsResp);
 }

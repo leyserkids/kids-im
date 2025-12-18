@@ -556,6 +556,14 @@ message MarkAsReadTips {
   int64 hasReadSeq = 4;
 }
 
+// GroupHasReadTips is used to notify group members about read receipt updates
+message GroupHasReadTips {
+  string groupID = 1;
+  string conversationID = 2;
+  string userID = 3;
+  int64 hasReadSeq = 4;
+}
+
 message SetAppBackgroundStatusReq {
   string userID = 1;
   bool isBackground = 2;
