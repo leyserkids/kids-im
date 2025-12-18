@@ -118,6 +118,18 @@ func IsNotification(conversationID string) bool {
 	return strings.HasPrefix(conversationID, "n_")
 }
 
+// GetGroupIDFromConversationID extracts the groupID from a group conversation ID.
+// Returns empty string if the conversationID is not a group conversation.
+func GetGroupIDFromConversationID(conversationID string) string {
+	if strings.HasPrefix(conversationID, "sg_") {
+		return strings.TrimPrefix(conversationID, "sg_")
+	}
+	if strings.HasPrefix(conversationID, "g_") {
+		return strings.TrimPrefix(conversationID, "g_")
+	}
+	return ""
+}
+
 func IsNotificationByMsg(msg *sdkws.MsgData) bool {
 	return !Options(msg.Options).IsNotNotification()
 }

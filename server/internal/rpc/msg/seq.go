@@ -102,3 +102,11 @@ func (m *msgServer) SetUserConversationMinSeq(ctx context.Context, req *pbmsg.Se
 	}
 	return &pbmsg.SetUserConversationMinSeqResp{}, nil
 }
+
+func (m *msgServer) GetConversationUserReadSeqs(ctx context.Context, req *pbmsg.GetConversationUserReadSeqsReq) (*pbmsg.GetConversationUserReadSeqsResp, error) {
+	userReadSeqs, err := m.MsgDatabase.GetConversationUserReadSeqs(ctx, req.ConversationID, req.UserIDs)
+	if err != nil {
+		return nil, err
+	}
+	return &pbmsg.GetConversationUserReadSeqsResp{UserReadSeqs: userReadSeqs}, nil
+}

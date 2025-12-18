@@ -74,6 +74,8 @@ type CommonMsgDatabase interface {
 	GetHasReadSeqs(ctx context.Context, userID string, conversationIDs []string) (map[string]int64, error)
 	GetHasReadSeq(ctx context.Context, userID string, conversationID string) (int64, error)
 	UserSetHasReadSeqs(ctx context.Context, userID string, hasReadSeqs map[string]int64) error
+	// GetConversationUserReadSeqs gets read seqs for multiple users in a conversation
+	GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error)
 
 	GetMaxSeqsWithTime(ctx context.Context, conversationIDs []string) (map[string]database.SeqTime, error)
 	GetMaxSeqWithTime(ctx context.Context, conversationID string) (database.SeqTime, error)
@@ -599,6 +601,10 @@ func (db *commonMsgDatabase) GetHasReadSeqs(ctx context.Context, userID string, 
 
 func (db *commonMsgDatabase) GetHasReadSeq(ctx context.Context, userID string, conversationID string) (int64, error) {
 	return db.seqUser.GetUserReadSeq(ctx, conversationID, userID)
+}
+
+func (db *commonMsgDatabase) GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error) {
+	return db.seqUser.GetConversationUserReadSeqs(ctx, conversationID, userIDs)
 }
 
 func (db *commonMsgDatabase) SetSendMsgStatus(ctx context.Context, id string, status int32) error {

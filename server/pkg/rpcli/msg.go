@@ -88,3 +88,11 @@ func (x *MsgClient) SetUserConversationsMinSeq(ctx context.Context, conversation
 	req := &msg.SetUserConversationsMinSeqReq{ConversationID: conversationID, UserIDs: userIDs, Seq: seq}
 	return ignoreResp(x.MsgClient.SetUserConversationsMinSeq(ctx, req))
 }
+
+func (x *MsgClient) GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error) {
+	if len(userIDs) == 0 {
+		return make(map[string]int64), nil
+	}
+	req := &msg.GetConversationUserReadSeqsReq{ConversationID: conversationID, UserIDs: userIDs}
+	return extractField(ctx, x.MsgClient.GetConversationUserReadSeqs, req, (*msg.GetConversationUserReadSeqsResp).GetUserReadSeqs)
+}

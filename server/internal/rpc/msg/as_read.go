@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	cbapi "github.com/openimsdk/open-im-server/v3/pkg/callbackstruct"
+	"github.com/openimsdk/open-im-server/v3/pkg/msgprocessor"
 	"github.com/openimsdk/protocol/constant"
 	"github.com/openimsdk/protocol/msg"
 	"github.com/openimsdk/protocol/sdkws"
@@ -179,6 +180,11 @@ func (m *msgServer) MarkConversationAsRead(ctx context.Context, req *msg.MarkCon
 		}
 		m.sendMarkAsReadNotification(ctx, req.ConversationID, constant.SingleChatType, req.UserID,
 			req.UserID, seqs, hasReadSeq)
+
+		// Broadcast group read receipt to all group members
+		if conversation.ConversationType == constant.ReadGroupChatType {
+			m.broadcastGroupHasReadReceipt(ctx, req.ConversationID, req.UserID, hasReadSeq)
+		}
 	}
 
 	if conversation.ConversationType == constant.SingleChatType {
@@ -210,4 +216,36 @@ func (m *msgServer) sendMarkAsReadNotification(ctx context.Context, conversation
 	}
 	m.notificationSender.NotificationWithSessionType(ctx, sendID, recvID, constant.HasReadReceipt, sessionType, tips)
 
+}
+
+// broadcastGroupHasReadReceipt broadcasts group read receipt to all group members
+func (m *msgServer) broadcastGroupHasReadReceipt(ctx context.Context, conversationID string, userID string, hasReadSeq int64) {
+	// Extract groupID from conversationID
+	groupID := msgprocessor.GetGroupIDFromConversationID(conversationID)
+	if groupID == "" {
+		log.ZWarn(ctx, "broadcastGroupHasReadReceipt: failed to extract groupID", nil, "conversationID", conversationID)
+		return
+	}
+
+	// Get all group member userIDs
+	memberUserIDs, err := m.GroupLocalCache.GetGroupMemberIDs(ctx, groupID)
+	if err != nil {
+		log.ZWarn(ctx, "broadcastGroupHasReadReceipt: GetGroupMemberIDs failed", err, "groupID", groupID)
+		return
+	}
+
+	tips := &sdkws.GroupHasReadTips{
+		GroupID:        groupID,
+		ConversationID: conversationID,
+		UserID:         userID,
+		HasReadSeq:     hasReadSeq,
+	}
+
+	// Send notification to all group members (except the sender)
+	for _, memberUserID := range memberUserIDs {
+		if memberUserID == userID {
+			continue // Skip the sender
+		}
+		m.notificationSender.NotificationWithSessionType(ctx, userID, memberUserID, constant.GroupHasReadReceipt, constant.SingleChatType, tips)
+	}
 }

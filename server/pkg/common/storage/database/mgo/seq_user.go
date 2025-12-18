@@ -124,3 +124,30 @@ func (s *seqUserMongo) SetUserReadSeq(ctx context.Context, conversationID string
 	}
 	return s.setSeq(ctx, conversationID, userID, seq, "read_seq")
 }
+
+func (s *seqUserMongo) notFoundUserSet0(seq map[string]int64, userIDs []string) {
+	for _, userID := range userIDs {
+		if _, ok := seq[userID]; !ok {
+			seq[userID] = 0
+		}
+	}
+}
+
+// GetConversationUserReadSeqs gets read seqs for multiple users in a conversation
+func (s *seqUserMongo) GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error) {
+	if len(userIDs) == 0 {
+		return map[string]int64{}, nil
+	}
+	filter := bson.M{"conversation_id": conversationID, "user_id": bson.M{"$in": userIDs}}
+	opt := options.Find().SetProjection(bson.M{"_id": 0, "user_id": 1, "read_seq": 1})
+	seqs, err := mongoutil.Find[*model.SeqUser](ctx, s.coll, filter, opt)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[string]int64)
+	for _, seq := range seqs {
+		res[seq.UserID] = seq.ReadSeq
+	}
+	s.notFoundUserSet0(res, userIDs)
+	return res, nil
+}
