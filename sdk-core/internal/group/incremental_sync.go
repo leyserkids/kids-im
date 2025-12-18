@@ -58,6 +58,8 @@ func (g *Group) IncrSyncGroupAndMember(ctx context.Context, groupIDs ...string) 
 		if len(groupIDSet) == 0 {
 			return nil
 		}
+		// Track which groupIDs we're processing in this batch
+		processingGroupIDs := make(map[string]bool)
 		for groupID := range groupIDSet {
 			if len(groups) == cap(groups) {
 				break
@@ -74,27 +76,50 @@ func (g *Group) IncrSyncGroupAndMember(ctx context.Context, groupIDs ...string) 
 				return err
 			}
 			groups = append(groups, &req)
+			processingGroupIDs[groupID] = true
 		}
 		groupVersion, err := g.getIncrementalGroupMemberBatch(ctx, groups)
 		if err != nil {
 			return err
 		}
 		groups = groups[:0]
+
+		// Collect errors from goroutines
+		var errMu sync.Mutex
+		var syncErrors []error
+
 		for groupID, resp := range groupVersion {
 			tempResp := resp
 			tempGroupID := groupID
 			wg.Add(1)
-			go func() error {
+			go func() {
 				defer wg.Done()
 				if err := g.syncGroupAndMember(ctx, tempGroupID, tempResp); err != nil {
 					log.ZError(ctx, "sync Group And Member error", errs.Wrap(err))
-					return errs.Wrap(err)
+					errMu.Lock()
+					syncErrors = append(syncErrors, errs.Wrap(err))
+					errMu.Unlock()
 				}
-				return nil
 			}()
+			// Remove from set only after goroutine is started
 			delete(groupIDSet, tempGroupID)
 		}
+
+		// Remove groupIDs that were in the request but not in the response
+		// This prevents infinite loop if server doesn't return all requested groupIDs
+		for groupID := range processingGroupIDs {
+			if _, ok := groupVersion[groupID]; !ok {
+				delete(groupIDSet, groupID)
+				log.ZWarn(ctx, "groupID not found in server response, skipping", nil, "groupID", groupID)
+			}
+		}
+
 		wg.Wait()
+
+		// Return first error if any sync failed
+		if len(syncErrors) > 0 {
+			return errs.WrapMsg(syncErrors[0], "failed to sync group and member", "error_count", len(syncErrors))
+		}
 	}
 }
 

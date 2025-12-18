@@ -128,6 +128,8 @@ func (m *MsgListenerCallBak) OnRecvMessageExtensionsAdded(msgID string, reaction
 
 func (m *MsgListenerCallBak) OnRecvGroupReadReceipt(groupMsgReceiptList string) {
 }
+func (m *MsgListenerCallBak) OnGroupMinReadSeqChanged(minReadSeqInfo string) {
+}
 func (m *MsgListenerCallBak) OnNewRecvMessageRevoked(messageRevoked string) {
 }
 

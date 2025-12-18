@@ -29,6 +29,7 @@ import (
 
 	"github.com/openimsdk/protocol/sdkws"
 	"github.com/openimsdk/tools/log"
+	"gorm.io/gorm"
 )
 
 func (c *Conversation) getConversationMaxSeqAndSetHasRead(ctx context.Context, conversationID string) error {
@@ -239,16 +240,17 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 
 	}
 	if tips.MarkAsReadUserID != c.loginUserID {
-		if len(tips.Seqs) == 0 {
-			return errs.New("tips Seqs is empty").Wrap()
-		}
-		messages, err := c.db.GetMessagesBySeqs(ctx, tips.ConversationID, tips.Seqs)
-		if err != nil {
-			log.ZWarn(ctx, "GetMessagesBySeqs err", err, "conversationID", tips.ConversationID, "seqs", tips.Seqs)
-			return err
+		switch conversation.ConversationType {
+		case constant.SingleChatType:
+			if len(tips.Seqs) == 0 {
+				return errs.New("tips Seqs is empty").Wrap()
+			}
+			messages, err := c.db.GetMessagesBySeqs(ctx, tips.ConversationID, tips.Seqs)
+			if err != nil {
+				log.ZWarn(ctx, "GetMessagesBySeqs err", err, "conversationID", tips.ConversationID, "seqs", tips.Seqs)
+				return err
 
-		}
-		if conversation.ConversationType == constant.SingleChatType {
+			}
 			latestMsg := &sdk_struct.MsgStruct{}
 			if err := json.Unmarshal([]byte(conversation.LatestMsg), latestMsg); err != nil {
 				log.ZWarn(ctx, "Unmarshal err", err, "conversationID", tips.ConversationID, "latestMsg", conversation.LatestMsg)
@@ -268,7 +270,7 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 					if latestMsg.ClientMsgID == message.ClientMsgID {
 						latestMsg.IsRead = message.IsRead
 						conversation.LatestMsg = utils.StructToJsonString(latestMsg)
-						_ = common.TriggerCmdUpdateConversation(ctx, common.UpdateConNode{ConID: conversation.ConversationID, Action: constant.AddConOrUpLatMsg, Args: *conversation}, c.GetCh())
+						c.doUpdateConversation(common.Cmd2Value{Value: common.UpdateConNode{ConID: conversation.ConversationID, Action: constant.AddConOrUpLatMsg, Args: *conversation}, Ctx: ctx})
 
 					}
 					successMsgIDs = append(successMsgIDs, message.ClientMsgID)
@@ -277,42 +279,140 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 			var messageReceiptResp = []*sdk_struct.MessageReceipt{{UserID: tips.MarkAsReadUserID, MsgIDList: successMsgIDs,
 				SessionType: conversation.ConversationType, ReadTime: msg.SendTime}}
 			c.msgListener().OnRecvC2CReadReceipt(utils.StructToJsonString(messageReceiptResp))
+
+		case constant.ReadGroupChatType:
+			maxReadSeq := tips.HasReadSeq
+			if maxReadSeq > 0 {
+				// Update cursor and calculate minReadSeq change
+				minReadSeqChanged, newMinReadSeq := c.updateGroupReadCursorAndMinSeq(ctx, tips.ConversationID, tips.MarkAsReadUserID, maxReadSeq)
+
+				// Notify frontend about group read receipt
+				var groupReceiptResp = []*sdk_struct.MessageReceipt{{
+					GroupID:     conversation.GroupID,
+					UserID:      tips.MarkAsReadUserID,
+					MsgIDList:   nil,
+					HasReadSeq:  tips.HasReadSeq,
+					SessionType: conversation.ConversationType,
+					ReadTime:    msg.SendTime,
+				}}
+				c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(groupReceiptResp))
+
+				// If minReadSeq changed, notify frontend for UI update
+				if minReadSeqChanged {
+					c.msgListener().OnGroupMinReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
+						"conversationID": tips.ConversationID,
+						"groupID":        conversation.GroupID,
+						"minReadSeq":     newMinReadSeq,
+					}))
+				}
+			} else {
+				var groupReceiptResp = []*sdk_struct.MessageReceipt{{
+					GroupID:     conversation.GroupID,
+					UserID:      tips.MarkAsReadUserID,
+					MsgIDList:   nil,
+					HasReadSeq:  tips.HasReadSeq,
+					SessionType: conversation.ConversationType,
+					ReadTime:    msg.SendTime,
+				}}
+				c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(groupReceiptResp))
+			}
 		}
+
 	} else {
 		return c.doUnreadCount(ctx, conversation, tips.HasReadSeq, tips.Seqs)
 	}
 	return nil
 }
 
-// doGroupReadDrawing handles group read receipt notifications
-func (c *Conversation) doGroupReadDrawing(ctx context.Context, msg *sdkws.MsgData) error {
-	tips := &sdkws.GroupHasReadTips{}
-	err := utils.UnmarshalNotificationElem(msg.Content, tips)
-	if err != nil {
-		log.ZWarn(ctx, "UnmarshalNotificationElem err", err, "msg", msg)
-		return err
-	}
-	log.ZDebug(ctx, "do groupReadDrawing", "tips", tips)
+// updateGroupReadCursorAndMinSeq updates the group read cursor and recalculates minReadSeq if needed.
+// Returns (minReadSeqChanged, newMinReadSeq).
+func (c *Conversation) updateGroupReadCursorAndMinSeq(ctx context.Context, conversationID, userID string, maxReadSeq int64) (bool, int64) {
+	// Get current state
+	state, stateErr := c.db.GetGroupReadState(ctx, conversationID)
 
-	// Update local group read cursor
-	cursor := &model_struct.LocalGroupReadCursor{
-		ConversationID: tips.ConversationID,
-		UserID:         tips.UserID,
-		MaxReadSeq:     tips.HasReadSeq,
-	}
-	if err := c.db.UpsertGroupReadCursor(ctx, cursor); err != nil {
-		log.ZWarn(ctx, "UpsertGroupReadCursor err", err, "cursor", cursor)
-		return err
+	// Get old cursor to check if this user was the min holder
+	oldCursor, cursorErr := c.db.GetGroupReadCursor(ctx, conversationID, userID)
+	var oldReadSeq int64
+	var isNewCursor bool
+	if cursorErr == gorm.ErrRecordNotFound {
+		isNewCursor = true
+	} else if cursorErr == nil {
+		oldReadSeq = oldCursor.MaxReadSeq
+		// Skip if no change
+		if maxReadSeq <= oldReadSeq {
+			return false, 0
+		}
+	} else {
+		log.ZWarn(ctx, "GetGroupReadCursor err", cursorErr, "conversationID", conversationID, "userID", userID)
+		return false, 0
 	}
 
-	// Notify listeners about group read receipt update
-	readReceipt := &sdk_struct.GroupMessageReceipt{
-		GroupID:        tips.GroupID,
-		ConversationID: tips.ConversationID,
-		UserID:         tips.UserID,
-		HasReadSeq:     tips.HasReadSeq,
+	// Upsert the cursor
+	newCursor := &model_struct.LocalGroupReadCursor{
+		ConversationID: conversationID,
+		UserID:         userID,
+		MaxReadSeq:     maxReadSeq,
 	}
-	c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(readReceipt))
+	if err := c.db.UpsertGroupReadCursor(ctx, newCursor); err != nil {
+		log.ZWarn(ctx, "UpsertGroupReadCursor err", err, "conversationID", conversationID, "userID", userID)
+		return false, 0
+	}
 
-	return nil
+	// Calculate new minReadSeq
+	var minReadSeqChanged bool
+	var newMinReadSeq int64
+
+	if stateErr == gorm.ErrRecordNotFound || state == nil {
+		// First time - need to calculate minReadSeq from scratch
+		minSeq, err := c.db.GetMinReadSeqFromCursors(ctx, conversationID)
+		if err != nil {
+			log.ZWarn(ctx, "GetMinReadSeqFromCursors err", err, "conversationID", conversationID)
+			return false, 0
+		}
+		newMinReadSeq = minSeq
+		minReadSeqChanged = true
+
+		// Create new state
+		newState := &model_struct.LocalGroupReadState{
+			ConversationID: conversationID,
+			MinReadSeq:     newMinReadSeq,
+			CursorCount:    1,
+			Version:        1,
+		}
+		if err := c.db.UpsertGroupReadState(ctx, newState); err != nil {
+			log.ZWarn(ctx, "UpsertGroupReadState err", err, "conversationID", conversationID)
+		}
+	} else if stateErr == nil {
+		// State exists - check if minReadSeq needs recalculation
+		if isNewCursor {
+			// New user added - minReadSeq may decrease
+			if maxReadSeq < state.MinReadSeq || state.MinReadSeq == 0 {
+				newMinReadSeq = maxReadSeq
+				minReadSeqChanged = true
+			}
+			state.CursorCount++
+		} else if oldReadSeq == state.MinReadSeq {
+			// The updated user was the min holder - need to recalculate
+			minSeq, err := c.db.GetMinReadSeqFromCursors(ctx, conversationID)
+			if err != nil {
+				log.ZWarn(ctx, "GetMinReadSeqFromCursors err", err, "conversationID", conversationID)
+				return false, 0
+			}
+			if minSeq != state.MinReadSeq {
+				newMinReadSeq = minSeq
+				minReadSeqChanged = true
+			}
+		}
+		// If this user wasn't the min holder and it's not a new cursor, minReadSeq stays the same
+
+		if minReadSeqChanged {
+			state.MinReadSeq = newMinReadSeq
+			state.Version++
+			if err := c.db.UpsertGroupReadState(ctx, state); err != nil {
+				log.ZWarn(ctx, "UpsertGroupReadState err", err, "conversationID", conversationID)
+			}
+		}
+	}
+
+	return minReadSeqChanged, newMinReadSeq
 }

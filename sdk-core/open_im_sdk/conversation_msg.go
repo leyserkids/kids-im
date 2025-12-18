@@ -153,6 +153,17 @@ func RevokeMessage(callback open_im_sdk_callback.Base, operationID string, conve
 	call(callback, operationID, UserForSDK.Conversation().RevokeMessage, conversationID, clientMsgID)
 }
 
+// GetGroupReadState returns the group read state including minReadSeq for O(1) "all read" status check.
+func GetGroupReadState(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
+	call(callback, operationID, UserForSDK.Conversation().GetGroupReadState, conversationID)
+}
+
+// GetGroupReadCursors returns all user read cursors for a group conversation.
+// Use this for displaying "who has read" list in the UI.
+func GetGroupReadCursors(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
+	call(callback, operationID, UserForSDK.Conversation().GetGroupReadCursors, conversationID)
+}
+
 func TypingStatusUpdate(callback open_im_sdk_callback.Base, operationID string, recvID string, msgTip string) {
 	call(callback, operationID, UserForSDK.Conversation().TypingStatusUpdate, recvID, msgTip)
 }

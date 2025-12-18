@@ -210,6 +210,11 @@ func (e *emptyAdvancedMsgListener) OnRecvGroupReadReceipt(groupMsgReceiptList st
 		"groupMsgReceiptList", groupMsgReceiptList)
 }
 
+func (e *emptyAdvancedMsgListener) OnGroupMinReadSeqChanged(minReadSeqInfo string) {
+	log.ZWarn(e.ctx, "AdvancedMsgListener is not implemented", nil,
+		"minReadSeqInfo", minReadSeqInfo)
+}
+
 func (e *emptyAdvancedMsgListener) OnNewRecvMessageRevoked(messageRevoked string) {
 	log.ZWarn(e.ctx, "AdvancedMsgListener is not implemented", nil, "messageRevoked", messageRevoked)
 }

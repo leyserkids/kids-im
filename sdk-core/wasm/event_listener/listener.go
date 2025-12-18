@@ -129,6 +129,10 @@ func (a AdvancedMsgCallback) OnRecvGroupReadReceipt(groupMsgReceiptList string) 
 	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(groupMsgReceiptList).SendMessage()
 }
 
+func (a AdvancedMsgCallback) OnGroupMinReadSeqChanged(minReadSeqInfo string) {
+	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(minReadSeqInfo).SendMessage()
+}
+
 func (a AdvancedMsgCallback) OnRecvMessageRevoked(msgID string) {
 	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(msgID).SendMessage()
 }

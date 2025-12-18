@@ -164,6 +164,10 @@ func (o *onAdvancedMsgListener) OnRecvGroupReadReceipt(groupMsgReceiptList strin
 	log.ZInfo(o.ctx, "OnRecvGroupReadReceipt", "groupMsgReceiptList", groupMsgReceiptList)
 }
 
+func (o *onAdvancedMsgListener) OnGroupMinReadSeqChanged(minReadSeqInfo string) {
+	log.ZInfo(o.ctx, "OnGroupMinReadSeqChanged", "minReadSeqInfo", minReadSeqInfo)
+}
+
 func (o *onAdvancedMsgListener) OnRecvMessageRevoked(msgID string) {
 	log.ZInfo(o.ctx, "OnRecvMessageRevoked", "msgID", msgID)
 }

@@ -198,12 +198,21 @@ type TableMaster interface {
 }
 
 type GroupReadCursorModel interface {
-	GetGroupReadCursors(ctx context.Context, conversationID string) ([]*model_struct.LocalGroupReadCursor, error)
-	GetGroupReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalGroupReadCursor, error)
+	InsertGroupReadCursor(ctx context.Context, cursor *model_struct.LocalGroupReadCursor) error
 	UpsertGroupReadCursor(ctx context.Context, cursor *model_struct.LocalGroupReadCursor) error
-	BatchUpsertGroupReadCursors(ctx context.Context, cursors []*model_struct.LocalGroupReadCursor) error
-	DeleteGroupReadCursors(ctx context.Context, conversationID string) error
-	GetGroupReadCursorsVersion(ctx context.Context, conversationID string) (int64, error)
+	UpdateGroupReadCursor(ctx context.Context, conversationID, userID string, maxReadSeq int64) error
+	GetGroupReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalGroupReadCursor, error)
+	GetGroupReadCursorsByConversationID(ctx context.Context, conversationID string) ([]*model_struct.LocalGroupReadCursor, error)
+	GetMinReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error)
+	DeleteGroupReadCursor(ctx context.Context, conversationID, userID string) error
+	DeleteGroupReadCursorsByConversationID(ctx context.Context, conversationID string) error
+}
+
+type GroupReadStateModel interface {
+	GetGroupReadState(ctx context.Context, conversationID string) (*model_struct.LocalGroupReadState, error)
+	UpsertGroupReadState(ctx context.Context, state *model_struct.LocalGroupReadState) error
+	UpdateGroupReadStateMinSeq(ctx context.Context, conversationID string, minReadSeq int64) error
+	DeleteGroupReadState(ctx context.Context, conversationID string) error
 }
 
 type DataBase interface {
@@ -220,4 +229,5 @@ type DataBase interface {
 	AppSDKVersion
 	TableMaster
 	GroupReadCursorModel
+	GroupReadStateModel
 }

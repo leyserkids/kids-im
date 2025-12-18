@@ -335,12 +335,25 @@ func (LocalAppSDKVersion) TableName() string {
 
 // LocalGroupReadCursor stores the read cursor (max read seq) for each user in a group conversation
 type LocalGroupReadCursor struct {
-	ConversationID string `gorm:"column:conversation_id;primary_key;type:varchar(128)" json:"conversationID"`
-	UserID         string `gorm:"column:user_id;primary_key;type:varchar(64)" json:"userID"`
+	ConversationID string `gorm:"column:conversation_id;primary_key;type:char(128)" json:"conversationID"`
+	UserID         string `gorm:"column:user_id;primary_key;type:char(64)" json:"userID"`
 	MaxReadSeq     int64  `gorm:"column:max_read_seq" json:"maxReadSeq"`
-	CursorVersion  int64  `gorm:"column:cursor_version" json:"cursorVersion"`
 }
 
 func (LocalGroupReadCursor) TableName() string {
-	return "local_group_read_cursors"
+	return "local_group_read_cursor"
+}
+
+// LocalGroupReadState stores the group read state including minReadSeq for O(1) "all read" check
+type LocalGroupReadState struct {
+	ConversationID string `gorm:"column:conversation_id;primary_key;type:char(128)" json:"conversationID"`
+	MinReadSeq     int64  `gorm:"column:min_read_seq" json:"minReadSeq"`     // Minimum readSeq across all group members
+	MemberCount    int32  `gorm:"column:member_count" json:"memberCount"`    // Total group member count
+	CursorCount    int32  `gorm:"column:cursor_count" json:"cursorCount"`    // Number of recorded cursors
+	LastSyncTime   int64  `gorm:"column:last_sync_time" json:"lastSyncTime"` // Last full sync timestamp
+	Version        int64  `gorm:"column:version" json:"version"`             // Version for incremental sync
+}
+
+func (LocalGroupReadState) TableName() string {
+	return "local_group_read_state"
 }

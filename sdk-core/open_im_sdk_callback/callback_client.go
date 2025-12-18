@@ -71,6 +71,7 @@ type OnAdvancedMsgListener interface {
 	OnRecvNewMessage(message string)
 	OnRecvC2CReadReceipt(msgReceiptList string)
 	OnRecvGroupReadReceipt(groupMsgReceipt string)
+	OnGroupMinReadSeqChanged(minReadSeqInfo string) // New: notify when minReadSeq changes for "all read" status
 	OnNewRecvMessageRevoked(messageRevoked string)
 	OnRecvOfflineNewMessage(message string)
 	OnMsgDeleted(message string)

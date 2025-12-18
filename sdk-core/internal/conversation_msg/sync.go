@@ -155,10 +155,21 @@ func (c *Conversation) SyncGroupReadCursors(ctx context.Context, conversationIDs
 				ConversationID: convCursors.ConversationID,
 				UserID:         cursor.UserID,
 				MaxReadSeq:     cursor.MaxReadSeq,
-				CursorVersion:  convCursors.CursorVersion,
 			}
-			if err := c.db.UpsertGroupReadCursor(ctx, localCursor); err != nil {
-				log.ZWarn(ctx, "UpsertGroupReadCursor err", err, "cursor", localCursor)
+			// Try to get existing cursor first
+			existingCursor, err := c.db.GetGroupReadCursor(ctx, convCursors.ConversationID, cursor.UserID)
+			if err != nil {
+				// If not found, insert new cursor
+				if err := c.db.InsertGroupReadCursor(ctx, localCursor); err != nil {
+					log.ZWarn(ctx, "InsertGroupReadCursor err", err, "cursor", localCursor)
+				}
+			} else {
+				// If found and new seq is greater, update it
+				if cursor.MaxReadSeq > existingCursor.MaxReadSeq {
+					if err := c.db.UpdateGroupReadCursor(ctx, convCursors.ConversationID, cursor.UserID, cursor.MaxReadSeq); err != nil {
+						log.ZWarn(ctx, "UpdateGroupReadCursor err", err, "cursor", localCursor)
+					}
+				}
 			}
 		}
 	}

@@ -749,6 +749,16 @@ func (c *Conversation) RevokeMessage(ctx context.Context, conversationID, client
 	return c.revokeOneMessage(ctx, conversationID, clientMsgID)
 }
 
+// GetGroupReadState returns the group read state including minReadSeq for O(1) "all read" status check.
+func (c *Conversation) GetGroupReadState(ctx context.Context, conversationID string) (*model_struct.LocalGroupReadState, error) {
+	return c.db.GetGroupReadState(ctx, conversationID)
+}
+
+// GetGroupReadCursors returns all user read cursors for a group conversation.
+func (c *Conversation) GetGroupReadCursors(ctx context.Context, conversationID string) ([]*model_struct.LocalGroupReadCursor, error) {
+	return c.db.GetGroupReadCursorsByConversationID(ctx, conversationID)
+}
+
 func (c *Conversation) TypingStatusUpdate(ctx context.Context, recvID, msgTip string) error {
 	return c.typingStatusUpdate(ctx, recvID, msgTip)
 }
@@ -1003,7 +1013,7 @@ func (c *Conversation) ChangeInputStates(ctx context.Context, conversationID str
 // for a specific conversation. It fetches from local cache first, then from server if needed.
 func (c *Conversation) GetGroupMessageReaderList(ctx context.Context, conversationID string, seq int64) ([]*sdk_struct.GroupMessageReceipt, error) {
 	// First try to get from local database
-	cursors, err := c.db.GetGroupReadCursors(ctx, conversationID)
+	cursors, err := c.db.GetGroupReadCursorsByConversationID(ctx, conversationID)
 	if err != nil {
 		return nil, err
 	}

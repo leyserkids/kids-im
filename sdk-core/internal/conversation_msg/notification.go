@@ -178,8 +178,6 @@ func (c *Conversation) doNotification(ctx context.Context, msg *sdkws.MsgData) e
 		return c.doDeleteMsgs(ctx, msg)
 	case constant.HasReadReceipt: // 2200
 		return c.doReadDrawing(ctx, msg)
-	case constant.GroupHasReadReceipt: // 2201
-		return c.doGroupReadDrawing(ctx, msg)
 	}
 	return errs.New("unknown tips type", "contentType", msg.ContentType).Wrap()
 }

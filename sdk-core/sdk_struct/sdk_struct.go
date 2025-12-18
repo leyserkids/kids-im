@@ -24,6 +24,7 @@ type MessageReceipt struct {
 	GroupID     string   `json:"groupID"`
 	UserID      string   `json:"userID"`
 	MsgIDList   []string `json:"msgIDList"`
+	HasReadSeq  int64    `json:"hasReadSeq"`
 	ReadTime    int64    `json:"readTime"`
 	MsgFrom     int32    `json:"msgFrom"`
 	ContentType int32    `json:"contentType"`
@@ -295,6 +296,7 @@ type GroupHasReadInfo struct {
 	HasReadUserIDList []string `json:"hasReadUserIDList,omitempty"`
 	HasReadCount      int32    `json:"hasReadCount"`
 	GroupMemberCount  int32    `json:"groupMemberCount"`
+	ReadCursorVersion int64    `json:"readCursorVersion"`
 }
 type NewMsgList []*MsgStruct
 
