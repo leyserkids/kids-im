@@ -116,4 +116,4 @@ basepc
 .pnp.*
 
 # Compiled code
-lib/
+# lib/
