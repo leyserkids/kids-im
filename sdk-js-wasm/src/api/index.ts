@@ -622,6 +622,30 @@ export function initDatabaseAPI(isLogStandardOutput = true): void {
     'searchGroupMembersDB'
   );
 
+  // group read cursor
+  window.insertGroupReadCursor = registeMethodOnWindow('insertGroupReadCursor');
+  window.getGroupReadCursor = registeMethodOnWindow('getGroupReadCursor');
+  window.getGroupReadCursorsByConversationID = registeMethodOnWindow(
+    'getGroupReadCursorsByConversationID'
+  );
+  window.updateGroupReadCursor = registeMethodOnWindow('updateGroupReadCursor');
+  window.deleteGroupReadCursor = registeMethodOnWindow('deleteGroupReadCursor');
+  window.deleteGroupReadCursorsByConversationID = registeMethodOnWindow(
+    'deleteGroupReadCursorsByConversationID'
+  );
+  window.insertGroupReadCursorState = registeMethodOnWindow(
+    'insertGroupReadCursorState'
+  );
+  window.getGroupReadCursorState = registeMethodOnWindow(
+    'getGroupReadCursorState'
+  );
+  window.deleteGroupReadCursorState = registeMethodOnWindow(
+    'deleteGroupReadCursorState'
+  );
+  window.incrementGroupReadCursorVersion = registeMethodOnWindow(
+    'incrementGroupReadCursorVersion'
+  );
+
   // temp cache chat logs
   window.batchInsertTempCacheMessageList = registeMethodOnWindow(
     'batchInsertTempCacheMessageList'

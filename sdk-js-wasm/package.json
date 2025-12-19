@@ -1,6 +1,6 @@
 {
   "name": "@openim/wasm-client-sdk",
-  "version": "3.8.3-patch.3",
+  "version": "3.8.3-kids-patch.1",
   "description": "open im sdk for web",
   "source": "src/index.ts",
   "main": "lib/index.js",
@@ -31,7 +31,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OpenIMSDK/Open-IM-SDK-Web-Wasm.git"
+    "url": "git+https://github.com/leyserkids/openim-sdk-js-wasm.git"
   },
   "license": "MIT",
   "author": {
@@ -45,10 +45,6 @@
   "keywords": [
     "openim"
   ],
-  "bugs": {
-    "url": "https://github.com/OpenIMSDK/Open-IM-SDK-Web-Wasm/issues"
-  },
-  "homepage": "https://github.com/OpenIMSDK/Open-IM-SDK-Web-Wasm#readme",
   "devDependencies": {
     "@commitlint/cli": "^16.2.4",
     "@commitlint/config-conventional": "^16.2.4",

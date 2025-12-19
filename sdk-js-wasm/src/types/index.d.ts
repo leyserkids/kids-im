@@ -236,6 +236,18 @@ declare global {
     updateGroupMemberField: DatabaseApi;
     searchGroupMembersDB: DatabaseApi;
 
+    // group read cursor
+    insertGroupReadCursor: DatabaseApi;
+    getGroupReadCursor: DatabaseApi;
+    getGroupReadCursorsByConversationID: DatabaseApi;
+    updateGroupReadCursor: DatabaseApi;
+    deleteGroupReadCursor: DatabaseApi;
+    deleteGroupReadCursorsByConversationID: DatabaseApi;
+    insertGroupReadCursorState: DatabaseApi;
+    getGroupReadCursorState: DatabaseApi;
+    deleteGroupReadCursorState: DatabaseApi;
+    incrementGroupReadCursorVersion: DatabaseApi;
+
     // temp chche logs
     batchInsertTempCacheMessageList: DatabaseApi;
     InsertTempCacheMessage: DatabaseApi;

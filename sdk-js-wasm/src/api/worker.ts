@@ -193,6 +193,18 @@ import {
   getNotificationAllSeqs,
   batchInsertNotificationSeq,
   getExistedTables,
+
+  // group read cursor
+  insertGroupReadCursor,
+  getGroupReadCursor,
+  getGroupReadCursorsByConversationID,
+  updateGroupReadCursor,
+  deleteGroupReadCursor,
+  deleteGroupReadCursorsByConversationID,
+  insertGroupReadCursorState,
+  getGroupReadCursorState,
+  deleteGroupReadCursorState,
+  incrementGroupReadCursorVersion,
 } from '../api/database';
 
 import { getInstance } from './database/instance';
@@ -479,6 +491,27 @@ rpc.registerMethod('batchInsertNotificationSeq', batchInsertNotificationSeq);
 rpc.registerMethod('setNotificationSeq', setNotificationSeq);
 
 rpc.registerMethod('getExistedTables', getExistedTables);
+
+// group read cursor
+rpc.registerMethod('insertGroupReadCursor', insertGroupReadCursor);
+rpc.registerMethod('getGroupReadCursor', getGroupReadCursor);
+rpc.registerMethod(
+  'getGroupReadCursorsByConversationID',
+  getGroupReadCursorsByConversationID
+);
+rpc.registerMethod('updateGroupReadCursor', updateGroupReadCursor);
+rpc.registerMethod('deleteGroupReadCursor', deleteGroupReadCursor);
+rpc.registerMethod(
+  'deleteGroupReadCursorsByConversationID',
+  deleteGroupReadCursorsByConversationID
+);
+rpc.registerMethod('insertGroupReadCursorState', insertGroupReadCursorState);
+rpc.registerMethod('getGroupReadCursorState', getGroupReadCursorState);
+rpc.registerMethod('deleteGroupReadCursorState', deleteGroupReadCursorState);
+rpc.registerMethod(
+  'incrementGroupReadCursorVersion',
+  incrementGroupReadCursorVersion
+);
 
 rpc.registerMethod('exec', async (sql: string) => {
   const db = await getInstance();
