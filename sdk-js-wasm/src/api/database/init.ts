@@ -19,7 +19,7 @@ import {
   localAppSDKVersions,
   localVersionSyncs,
   localGroupReadCursor,
-  localGroupReadCursorState,
+  localGroupReadState,
 } from '@/sqls';
 import { formatResponse } from '@/utils';
 import { QueryExecResult } from '@jlongster/sql.js';
@@ -65,7 +65,7 @@ export async function init(userId: string, dir: string): Promise<string> {
     const execResultLocalAppSDKVersions = localAppSDKVersions(db);
     const execResultLocalVersionSync = localVersionSyncs(db);
     const execResultLocalGroupReadCursor = localGroupReadCursor(db);
-    const execResultLocalGroupReadCursorState = localGroupReadCursorState(db);
+    const execResultLocalGroupReadState = localGroupReadState(db);
     alterTable(db);
     results.push(
       ...[
@@ -88,7 +88,7 @@ export async function init(userId: string, dir: string): Promise<string> {
         execResultLocalAppSDKVersions,
         execResultLocalVersionSync,
         execResultLocalGroupReadCursor,
-        execResultLocalGroupReadCursorState,
+        execResultLocalGroupReadState,
       ]
     );
 

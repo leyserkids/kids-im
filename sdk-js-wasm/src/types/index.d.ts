@@ -243,10 +243,13 @@ declare global {
     updateGroupReadCursor: DatabaseApi;
     deleteGroupReadCursor: DatabaseApi;
     deleteGroupReadCursorsByConversationID: DatabaseApi;
-    insertGroupReadCursorState: DatabaseApi;
-    getGroupReadCursorState: DatabaseApi;
-    deleteGroupReadCursorState: DatabaseApi;
-    incrementGroupReadCursorVersion: DatabaseApi;
+    upsertGroupReadCursor: DatabaseApi;
+    getMinReadSeqFromCursors: DatabaseApi;
+    // group read state
+    getGroupReadState: DatabaseApi;
+    upsertGroupReadState: DatabaseApi;
+    updateGroupReadStateMinSeq: DatabaseApi;
+    deleteGroupReadState: DatabaseApi;
 
     // temp chche logs
     batchInsertTempCacheMessageList: DatabaseApi;

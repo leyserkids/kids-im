@@ -633,18 +633,17 @@ export function initDatabaseAPI(isLogStandardOutput = true): void {
   window.deleteGroupReadCursorsByConversationID = registeMethodOnWindow(
     'deleteGroupReadCursorsByConversationID'
   );
-  window.insertGroupReadCursorState = registeMethodOnWindow(
-    'insertGroupReadCursorState'
+  window.upsertGroupReadCursor = registeMethodOnWindow('upsertGroupReadCursor');
+  window.getMinReadSeqFromCursors = registeMethodOnWindow(
+    'getMinReadSeqFromCursors'
   );
-  window.getGroupReadCursorState = registeMethodOnWindow(
-    'getGroupReadCursorState'
+  // group read state
+  window.getGroupReadState = registeMethodOnWindow('getGroupReadState');
+  window.upsertGroupReadState = registeMethodOnWindow('upsertGroupReadState');
+  window.updateGroupReadStateMinSeq = registeMethodOnWindow(
+    'updateGroupReadStateMinSeq'
   );
-  window.deleteGroupReadCursorState = registeMethodOnWindow(
-    'deleteGroupReadCursorState'
-  );
-  window.incrementGroupReadCursorVersion = registeMethodOnWindow(
-    'incrementGroupReadCursorVersion'
-  );
+  window.deleteGroupReadState = registeMethodOnWindow('deleteGroupReadState');
 
   // temp cache chat logs
   window.batchInsertTempCacheMessageList = registeMethodOnWindow(

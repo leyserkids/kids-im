@@ -4,7 +4,9 @@ export declare function getGroupReadCursorsByConversationID(conversationID: stri
 export declare function updateGroupReadCursor(conversationID: string, userID: string, maxReadSeq: number): Promise<string>;
 export declare function deleteGroupReadCursor(conversationID: string, userID: string): Promise<string>;
 export declare function deleteGroupReadCursorsByConversationID(conversationID: string): Promise<string>;
-export declare function insertGroupReadCursorState(stateJSON: string): Promise<string>;
-export declare function getGroupReadCursorState(conversationID: string): Promise<string>;
-export declare function deleteGroupReadCursorState(conversationID: string): Promise<string>;
-export declare function incrementGroupReadCursorVersion(conversationID: string): Promise<string>;
+export declare function upsertGroupReadCursor(cursorJSON: string): Promise<string>;
+export declare function getMinReadSeqFromCursors(conversationID: string): Promise<string>;
+export declare function getGroupReadState(conversationID: string): Promise<string>;
+export declare function upsertGroupReadState(stateJSON: string): Promise<string>;
+export declare function updateGroupReadStateMinSeq(conversationID: string, minReadSeq: number): Promise<string>;
+export declare function deleteGroupReadState(conversationID: string): Promise<string>;

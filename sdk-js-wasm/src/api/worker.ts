@@ -201,10 +201,13 @@ import {
   updateGroupReadCursor,
   deleteGroupReadCursor,
   deleteGroupReadCursorsByConversationID,
-  insertGroupReadCursorState,
-  getGroupReadCursorState,
-  deleteGroupReadCursorState,
-  incrementGroupReadCursorVersion,
+  upsertGroupReadCursor,
+  getMinReadSeqFromCursors,
+  // group read state
+  getGroupReadState,
+  upsertGroupReadState,
+  updateGroupReadStateMinSeq,
+  deleteGroupReadState,
 } from '../api/database';
 
 import { getInstance } from './database/instance';
@@ -505,13 +508,13 @@ rpc.registerMethod(
   'deleteGroupReadCursorsByConversationID',
   deleteGroupReadCursorsByConversationID
 );
-rpc.registerMethod('insertGroupReadCursorState', insertGroupReadCursorState);
-rpc.registerMethod('getGroupReadCursorState', getGroupReadCursorState);
-rpc.registerMethod('deleteGroupReadCursorState', deleteGroupReadCursorState);
-rpc.registerMethod(
-  'incrementGroupReadCursorVersion',
-  incrementGroupReadCursorVersion
-);
+rpc.registerMethod('upsertGroupReadCursor', upsertGroupReadCursor);
+rpc.registerMethod('getMinReadSeqFromCursors', getMinReadSeqFromCursors);
+// group read state
+rpc.registerMethod('getGroupReadState', getGroupReadState);
+rpc.registerMethod('upsertGroupReadState', upsertGroupReadState);
+rpc.registerMethod('updateGroupReadStateMinSeq', updateGroupReadStateMinSeq);
+rpc.registerMethod('deleteGroupReadState', deleteGroupReadState);
 
 rpc.registerMethod('exec', async (sql: string) => {
   const db = await getInstance();

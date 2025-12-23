@@ -1,10 +1,14 @@
 import { Database, QueryExecResult } from '@jlongster/sql.js';
-export declare type LocalGroupReadCursorState = {
+export declare type LocalGroupReadState = {
     conversationID: string;
-    cursorVersion: number;
+    minReadSeq: number;
+    memberCount: number;
+    cursorCount: number;
+    lastSyncTime: number;
+    version: number;
 };
-export declare function localGroupReadCursorState(db: Database): QueryExecResult[];
-export declare function insertGroupReadCursorState(db: Database, stateJSON: string): QueryExecResult[];
-export declare function getGroupReadCursorState(db: Database, conversationID: string): QueryExecResult[];
-export declare function deleteGroupReadCursorState(db: Database, conversationID: string): QueryExecResult[];
-export declare function incrementGroupReadCursorVersion(db: Database, conversationID: string): QueryExecResult[];
+export declare function localGroupReadState(db: Database): QueryExecResult[];
+export declare function getGroupReadState(db: Database, conversationID: string): QueryExecResult[];
+export declare function upsertGroupReadState(db: Database, stateJSON: string): QueryExecResult[];
+export declare function updateGroupReadStateMinSeq(db: Database, conversationID: string, minReadSeq: number): QueryExecResult[];
+export declare function deleteGroupReadState(db: Database, conversationID: string): QueryExecResult[];

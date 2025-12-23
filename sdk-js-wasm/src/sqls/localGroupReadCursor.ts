@@ -97,3 +97,28 @@ export function deleteGroupReadCursorsByConversationID(
     `
   );
 }
+
+export function upsertGroupReadCursor(
+  db: Database,
+  cursorJSON: string
+): QueryExecResult[] {
+  const cursor = JSON.parse(cursorJSON) as LocalGroupReadCursor;
+  return db.exec(
+    `
+      insert or replace into local_group_read_cursor (conversation_id, user_id, max_read_seq)
+      values ('${cursor.conversationID}', '${cursor.userID}', ${cursor.maxReadSeq});
+    `
+  );
+}
+
+export function getMinReadSeqFromCursors(
+  db: Database,
+  conversationID: string
+): QueryExecResult[] {
+  return db.exec(
+    `
+      select min(max_read_seq) as min_read_seq from local_group_read_cursor
+      where conversation_id = '${conversationID}';
+    `
+  );
+}

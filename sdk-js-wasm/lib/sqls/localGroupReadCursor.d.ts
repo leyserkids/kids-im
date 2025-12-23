@@ -11,3 +11,5 @@ export declare function getGroupReadCursorsByConversationID(db: Database, conver
 export declare function updateGroupReadCursor(db: Database, conversationID: string, userID: string, maxReadSeq: number): QueryExecResult[];
 export declare function deleteGroupReadCursor(db: Database, conversationID: string, userID: string): QueryExecResult[];
 export declare function deleteGroupReadCursorsByConversationID(db: Database, conversationID: string): QueryExecResult[];
+export declare function upsertGroupReadCursor(db: Database, cursorJSON: string): QueryExecResult[];
+export declare function getMinReadSeqFromCursors(db: Database, conversationID: string): QueryExecResult[];

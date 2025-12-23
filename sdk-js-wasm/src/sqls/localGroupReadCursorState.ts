@@ -1,77 +1,81 @@
 import { Database, QueryExecResult } from '@jlongster/sql.js';
 
-export type LocalGroupReadCursorState = {
+export type LocalGroupReadState = {
   conversationID: string;
-  cursorVersion: number;
+  minReadSeq: number;
+  memberCount: number;
+  cursorCount: number;
+  lastSyncTime: number;
+  version: number;
 };
 
-export function localGroupReadCursorState(db: Database): QueryExecResult[] {
+export function localGroupReadState(db: Database): QueryExecResult[] {
   return db.exec(
     `
-      create table if not exists 'local_group_read_cursor_state' (
+      create table if not exists 'local_group_read_state' (
             'conversation_id' char(128),
-            'cursor_version' integer default 0,
+            'min_read_seq' integer default 0,
+            'member_count' integer default 0,
+            'cursor_count' integer default 0,
+            'last_sync_time' integer default 0,
+            'version' integer default 0,
             primary key ('conversation_id')
         )
     `
   );
 }
 
-export function insertGroupReadCursorState(
-  db: Database,
-  stateJSON: string
-): QueryExecResult[] {
-  const state = JSON.parse(stateJSON) as LocalGroupReadCursorState;
-  return db.exec(
-    `
-      insert or replace into local_group_read_cursor_state (conversation_id, cursor_version)
-      values ('${state.conversationID}', ${state.cursorVersion || 0});
-    `
-  );
-}
-
-export function getGroupReadCursorState(
+export function getGroupReadState(
   db: Database,
   conversationID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      select * from local_group_read_cursor_state
+      select * from local_group_read_state
       where conversation_id = '${conversationID}'
       limit 1;
     `
   );
 }
 
-export function deleteGroupReadCursorState(
+export function upsertGroupReadState(
   db: Database,
-  conversationID: string
+  stateJSON: string
+): QueryExecResult[] {
+  const state = JSON.parse(stateJSON) as LocalGroupReadState;
+  return db.exec(
+    `
+      insert or replace into local_group_read_state (conversation_id, min_read_seq, member_count, cursor_count, last_sync_time, version)
+      values ('${state.conversationID}', ${state.minReadSeq || 0}, ${
+      state.memberCount || 0
+    }, ${state.cursorCount || 0}, ${state.lastSyncTime || 0}, ${
+      state.version || 0
+    });
+    `
+  );
+}
+
+export function updateGroupReadStateMinSeq(
+  db: Database,
+  conversationID: string,
+  minReadSeq: number
 ): QueryExecResult[] {
   return db.exec(
     `
-      delete from local_group_read_cursor_state
+      update local_group_read_state
+      set min_read_seq = ${minReadSeq}
       where conversation_id = '${conversationID}';
     `
   );
 }
 
-export function incrementGroupReadCursorVersion(
+export function deleteGroupReadState(
   db: Database,
   conversationID: string
 ): QueryExecResult[] {
-  // First ensure the record exists
-  db.exec(
-    `
-      insert or ignore into local_group_read_cursor_state (conversation_id, cursor_version)
-      values ('${conversationID}', 0);
-    `
-  );
-
-  // Then increment
   return db.exec(
     `
-      update local_group_read_cursor_state
-      set cursor_version = cursor_version + 1
+      delete from local_group_read_state
       where conversation_id = '${conversationID}';
     `
   );

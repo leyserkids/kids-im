@@ -6,10 +6,12 @@ import {
   updateGroupReadCursor as databaseUpdateGroupReadCursor,
   deleteGroupReadCursor as databaseDeleteGroupReadCursor,
   deleteGroupReadCursorsByConversationID as databaseDeleteGroupReadCursorsByConversationID,
-  insertGroupReadCursorState as databaseInsertGroupReadCursorState,
-  getGroupReadCursorState as databaseGetGroupReadCursorState,
-  deleteGroupReadCursorState as databaseDeleteGroupReadCursorState,
-  incrementGroupReadCursorVersion as databaseIncrementGroupReadCursorVersion,
+  upsertGroupReadCursor as databaseUpsertGroupReadCursor,
+  getMinReadSeqFromCursors as databaseGetMinReadSeqFromCursors,
+  getGroupReadState as databaseGetGroupReadState,
+  upsertGroupReadState as databaseUpsertGroupReadState,
+  updateGroupReadStateMinSeq as databaseUpdateGroupReadStateMinSeq,
+  deleteGroupReadState as databaseDeleteGroupReadState,
 } from '@/sqls';
 import { converSqlExecResult, formatResponse } from '@/utils';
 import { getInstance } from './instance';
@@ -133,12 +135,12 @@ export async function deleteGroupReadCursorsByConversationID(
   }
 }
 
-export async function insertGroupReadCursorState(
-  stateJSON: string
+export async function upsertGroupReadCursor(
+  cursorJSON: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    databaseInsertGroupReadCursorState(db, stateJSON);
+    databaseUpsertGroupReadCursor(db, cursorJSON);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -150,18 +152,41 @@ export async function insertGroupReadCursorState(
   }
 }
 
-export async function getGroupReadCursorState(
+export async function getMinReadSeqFromCursors(
   conversationID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    const execResult = databaseGetGroupReadCursorState(db, conversationID);
+    const execResult = databaseGetMinReadSeqFromCursors(db, conversationID);
+
+    if (execResult.length === 0 || !execResult[0].values.length) {
+      return formatResponse(0);
+    }
+
+    const minSeq = execResult[0].values[0][0] as number;
+    return formatResponse(minSeq || 0);
+  } catch (e) {
+    console.error(e);
+    return formatResponse(
+      undefined,
+      DatabaseErrorCode.ErrorInit,
+      JSON.stringify(e)
+    );
+  }
+}
+
+export async function getGroupReadState(
+  conversationID: string
+): Promise<string> {
+  try {
+    const db = await getInstance();
+    const execResult = databaseGetGroupReadState(db, conversationID);
 
     if (execResult.length === 0 || !execResult[0].values.length) {
       return formatResponse(
         '',
         DatabaseErrorCode.ErrorNoRecord,
-        `no cursor state for conversation ${conversationID}`
+        `no read state for conversation ${conversationID}`
       );
     }
 
@@ -176,12 +201,10 @@ export async function getGroupReadCursorState(
   }
 }
 
-export async function deleteGroupReadCursorState(
-  conversationID: string
-): Promise<string> {
+export async function upsertGroupReadState(stateJSON: string): Promise<string> {
   try {
     const db = await getInstance();
-    databaseDeleteGroupReadCursorState(db, conversationID);
+    databaseUpsertGroupReadState(db, stateJSON);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -193,12 +216,30 @@ export async function deleteGroupReadCursorState(
   }
 }
 
-export async function incrementGroupReadCursorVersion(
+export async function updateGroupReadStateMinSeq(
+  conversationID: string,
+  minReadSeq: number
+): Promise<string> {
+  try {
+    const db = await getInstance();
+    databaseUpdateGroupReadStateMinSeq(db, conversationID, minReadSeq);
+    return formatResponse('');
+  } catch (e) {
+    console.error(e);
+    return formatResponse(
+      undefined,
+      DatabaseErrorCode.ErrorInit,
+      JSON.stringify(e)
+    );
+  }
+}
+
+export async function deleteGroupReadState(
   conversationID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    databaseIncrementGroupReadCursorVersion(db, conversationID);
+    databaseDeleteGroupReadState(db, conversationID);
     return formatResponse('');
   } catch (e) {
     console.error(e);
