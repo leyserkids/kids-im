@@ -71,7 +71,3 @@ func (o *ConversationApi) GetNotNotifyConversationIDs(c *gin.Context) {
 func (o *ConversationApi) GetPinnedConversationIDs(c *gin.Context) {
 	a2r.Call(c, conversation.ConversationClient.GetPinnedConversationIDs, o.Client)
 }
-
-func (o *ConversationApi) GetConversationReadCursors(c *gin.Context) {
-	a2r.Call(c, conversation.ConversationClient.GetConversationReadCursors, o.Client)
-}
