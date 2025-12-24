@@ -347,11 +347,7 @@ func (LocalGroupReadCursor) TableName() string {
 // LocalGroupReadState stores the group read state including minReadSeq for O(1) "all read" check
 type LocalGroupReadState struct {
 	ConversationID string `gorm:"column:conversation_id;primary_key;type:char(128)" json:"conversationID"`
-	MinReadSeq     int64  `gorm:"column:min_read_seq" json:"minReadSeq"`     // Minimum readSeq across all group members
-	MemberCount    int32  `gorm:"column:member_count" json:"memberCount"`    // Total group member count
-	CursorCount    int32  `gorm:"column:cursor_count" json:"cursorCount"`    // Number of recorded cursors
-	LastSyncTime   int64  `gorm:"column:last_sync_time" json:"lastSyncTime"` // Last full sync timestamp
-	Version        int64  `gorm:"column:version" json:"version"`             // Version for incremental sync
+	MinReadSeq     int64  `gorm:"column:min_read_seq" json:"minReadSeq"` // Minimum readSeq across all group members
 }
 
 func (LocalGroupReadState) TableName() string {

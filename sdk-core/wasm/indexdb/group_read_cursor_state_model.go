@@ -32,7 +32,8 @@ func NewLocalGroupReadState() *LocalGroupReadState {
 	return &LocalGroupReadState{}
 }
 
-func (l *LocalGroupReadState) GetGroupReadState(ctx context.Context, conversationID string) (*model_struct.LocalGroupReadState, error) {
+// GetGroupReadStateDB uses DB suffix to avoid name conflict with WASM API function getGroupReadState
+func (l *LocalGroupReadState) GetGroupReadStateDB(ctx context.Context, conversationID string) (*model_struct.LocalGroupReadState, error) {
 	state, err := exec.Exec(conversationID)
 	if err != nil {
 		return nil, err
@@ -48,17 +49,40 @@ func (l *LocalGroupReadState) GetGroupReadState(ctx context.Context, conversatio
 	return nil, exec.ErrType
 }
 
-func (l *LocalGroupReadState) UpsertGroupReadState(ctx context.Context, state *model_struct.LocalGroupReadState) error {
+// GetGroupReadState wraps GetGroupReadStateDB for interface compatibility
+func (l *LocalGroupReadState) GetGroupReadState(ctx context.Context, conversationID string) (*model_struct.LocalGroupReadState, error) {
+	return l.GetGroupReadStateDB(ctx, conversationID)
+}
+
+// UpsertGroupReadStateDB uses DB suffix to avoid name conflict with WASM API function
+func (l *LocalGroupReadState) UpsertGroupReadStateDB(ctx context.Context, state *model_struct.LocalGroupReadState) error {
 	_, err := exec.Exec(utils.StructToJsonString(state))
 	return err
 }
 
-func (l *LocalGroupReadState) UpdateGroupReadStateMinSeq(ctx context.Context, conversationID string, minReadSeq int64) error {
+// UpsertGroupReadState wraps UpsertGroupReadStateDB for interface compatibility
+func (l *LocalGroupReadState) UpsertGroupReadState(ctx context.Context, state *model_struct.LocalGroupReadState) error {
+	return l.UpsertGroupReadStateDB(ctx, state)
+}
+
+// UpdateGroupReadStateMinSeqDB uses DB suffix to avoid name conflict with WASM API function
+func (l *LocalGroupReadState) UpdateGroupReadStateMinSeqDB(ctx context.Context, conversationID string, minReadSeq int64) error {
 	_, err := exec.Exec(conversationID, minReadSeq)
 	return err
 }
 
-func (l *LocalGroupReadState) DeleteGroupReadState(ctx context.Context, conversationID string) error {
+// UpdateGroupReadStateMinSeq wraps UpdateGroupReadStateMinSeqDB for interface compatibility
+func (l *LocalGroupReadState) UpdateGroupReadStateMinSeq(ctx context.Context, conversationID string, minReadSeq int64) error {
+	return l.UpdateGroupReadStateMinSeqDB(ctx, conversationID, minReadSeq)
+}
+
+// DeleteGroupReadStateDB uses DB suffix to avoid name conflict with WASM API function
+func (l *LocalGroupReadState) DeleteGroupReadStateDB(ctx context.Context, conversationID string) error {
 	_, err := exec.Exec(conversationID)
 	return err
+}
+
+// DeleteGroupReadState wraps DeleteGroupReadStateDB for interface compatibility
+func (l *LocalGroupReadState) DeleteGroupReadState(ctx context.Context, conversationID string) error {
+	return l.DeleteGroupReadStateDB(ctx, conversationID)
 }

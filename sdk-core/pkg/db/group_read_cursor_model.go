@@ -130,11 +130,7 @@ func (d *DataBase) UpsertGroupReadState(ctx context.Context, state *model_struct
 	result := d.conn.WithContext(ctx).Model(&model_struct.LocalGroupReadState{}).
 		Where("conversation_id = ?", state.ConversationID).
 		Updates(map[string]interface{}{
-			"min_read_seq":   state.MinReadSeq,
-			"member_count":   state.MemberCount,
-			"cursor_count":   state.CursorCount,
-			"last_sync_time": state.LastSyncTime,
-			"version":        state.Version,
+			"min_read_seq": state.MinReadSeq,
 		})
 
 	if result.Error != nil {
@@ -148,7 +144,7 @@ func (d *DataBase) UpsertGroupReadState(ctx context.Context, state *model_struct
 	return nil
 }
 
-// UpdateGroupReadStateMinSeq updates only the minReadSeq and increments version
+// UpdateGroupReadStateMinSeq updates only the minReadSeq
 func (d *DataBase) UpdateGroupReadStateMinSeq(ctx context.Context, conversationID string, minReadSeq int64) error {
 	d.mRWMutex.Lock()
 	defer d.mRWMutex.Unlock()
@@ -157,7 +153,6 @@ func (d *DataBase) UpdateGroupReadStateMinSeq(ctx context.Context, conversationI
 		Where("conversation_id = ?", conversationID).
 		Updates(map[string]interface{}{
 			"min_read_seq": minReadSeq,
-			"version":      d.conn.Raw("version + 1"),
 		}).Error, "UpdateGroupReadStateMinSeq failed")
 }
 
