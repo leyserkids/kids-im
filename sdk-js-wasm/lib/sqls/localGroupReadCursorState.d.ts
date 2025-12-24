@@ -2,10 +2,6 @@ import { Database, QueryExecResult } from '@jlongster/sql.js';
 export declare type LocalGroupReadState = {
     conversationID: string;
     minReadSeq: number;
-    memberCount: number;
-    cursorCount: number;
-    lastSyncTime: number;
-    version: number;
 };
 export declare function localGroupReadState(db: Database): QueryExecResult[];
 export declare function getGroupReadState(db: Database, conversationID: string): QueryExecResult[];
