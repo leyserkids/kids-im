@@ -823,10 +823,11 @@ function initDatabaseAPI(isLogStandardOutput = true) {
     window.upsertGroupReadCursor = registeMethodOnWindow('upsertGroupReadCursor');
     window.getMinReadSeqFromCursors = registeMethodOnWindow('getMinReadSeqFromCursors');
     // group read state
-    window.getGroupReadState = registeMethodOnWindow('getGroupReadState');
-    window.upsertGroupReadState = registeMethodOnWindow('upsertGroupReadState');
-    window.updateGroupReadStateMinSeq = registeMethodOnWindow('updateGroupReadStateMinSeq');
-    window.deleteGroupReadState = registeMethodOnWindow('deleteGroupReadState');
+    // Use different names (with DB suffix) to avoid conflict with WASM API functions
+    window.getGroupReadStateDB = registeMethodOnWindow('getGroupReadState', 'getGroupReadStateDB');
+    window.upsertGroupReadStateDB = registeMethodOnWindow('upsertGroupReadState', 'upsertGroupReadStateDB');
+    window.updateGroupReadStateMinSeqDB = registeMethodOnWindow('updateGroupReadStateMinSeq', 'updateGroupReadStateMinSeqDB');
+    window.deleteGroupReadStateDB = registeMethodOnWindow('deleteGroupReadState', 'deleteGroupReadStateDB');
     // temp cache chat logs
     window.batchInsertTempCacheMessageList = registeMethodOnWindow('batchInsertTempCacheMessageList');
     window.InsertTempCacheMessage = registeMethodOnWindow('InsertTempCacheMessage');

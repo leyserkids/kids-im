@@ -638,12 +638,23 @@ export function initDatabaseAPI(isLogStandardOutput = true): void {
     'getMinReadSeqFromCursors'
   );
   // group read state
-  window.getGroupReadState = registeMethodOnWindow('getGroupReadState');
-  window.upsertGroupReadState = registeMethodOnWindow('upsertGroupReadState');
-  window.updateGroupReadStateMinSeq = registeMethodOnWindow(
-    'updateGroupReadStateMinSeq'
+  // Use different names (with DB suffix) to avoid conflict with WASM API functions
+  window.getGroupReadStateDB = registeMethodOnWindow(
+    'getGroupReadState',
+    'getGroupReadStateDB'
   );
-  window.deleteGroupReadState = registeMethodOnWindow('deleteGroupReadState');
+  window.upsertGroupReadStateDB = registeMethodOnWindow(
+    'upsertGroupReadState',
+    'upsertGroupReadStateDB'
+  );
+  window.updateGroupReadStateMinSeqDB = registeMethodOnWindow(
+    'updateGroupReadStateMinSeq',
+    'updateGroupReadStateMinSeqDB'
+  );
+  window.deleteGroupReadStateDB = registeMethodOnWindow(
+    'deleteGroupReadState',
+    'deleteGroupReadStateDB'
+  );
 
   // temp cache chat logs
   window.batchInsertTempCacheMessageList = registeMethodOnWindow(

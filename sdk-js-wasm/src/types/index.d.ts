@@ -245,11 +245,11 @@ declare global {
     deleteGroupReadCursorsByConversationID: DatabaseApi;
     upsertGroupReadCursor: DatabaseApi;
     getMinReadSeqFromCursors: DatabaseApi;
-    // group read state
-    getGroupReadState: DatabaseApi;
-    upsertGroupReadState: DatabaseApi;
-    updateGroupReadStateMinSeq: DatabaseApi;
-    deleteGroupReadState: DatabaseApi;
+    // group read state (with DB suffix to avoid conflict with WASM API functions)
+    getGroupReadStateDB: DatabaseApi;
+    upsertGroupReadStateDB: DatabaseApi;
+    updateGroupReadStateMinSeqDB: DatabaseApi;
+    deleteGroupReadStateDB: DatabaseApi;
 
     // temp chche logs
     batchInsertTempCacheMessageList: DatabaseApi;
