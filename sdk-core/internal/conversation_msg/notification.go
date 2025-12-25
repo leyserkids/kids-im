@@ -116,6 +116,8 @@ func (c *Conversation) syncFlag(c2v common.Cmd2Value) {
 	case constant.MsgSyncEnd:
 		log.ZDebug(ctx, "MsgSyncEnd", "time", time.Since(c.startTime).Milliseconds())
 		c.ConversationListener().OnSyncServerFinish(false)
+		// Sync ReadCursors for recent group conversations after message sync completes
+		go c.syncRecentReadCursors(ctx)
 	}
 }
 

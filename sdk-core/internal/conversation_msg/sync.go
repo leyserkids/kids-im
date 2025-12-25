@@ -177,3 +177,57 @@ func (c *Conversation) SyncReadCursors(ctx context.Context, conversationIDs []st
 	log.ZDebug(ctx, "SyncReadCursors completed", "totalDuration", time.Since(startTime).Seconds())
 	return nil
 }
+
+// getConversationIDsForReadCursorSync returns conversation IDs for ReadCursor sync:
+// - All single chat conversations
+// - Top N most recent (by latest_msg_send_time) group chat conversations
+func (c *Conversation) getConversationIDsForReadCursorSync(ctx context.Context, groupLimit int) ([]string, error) {
+	// Get all single chat conversations
+	allConversations, err := c.db.GetAllConversations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var conversationIDs []string
+	for _, conv := range allConversations {
+		if conv.ConversationType == constant.SingleChatType {
+			conversationIDs = append(conversationIDs, conv.ConversationID)
+		}
+	}
+
+	// Get recent group conversations (ordered by latest_msg_send_time desc)
+	recentConversations, err := c.db.GetConversationListSplitDB(ctx, 0, groupLimit*3)
+	if err != nil {
+		return nil, err
+	}
+
+	var groupCount int
+	for _, conv := range recentConversations {
+		if conv.ConversationType == constant.ReadGroupChatType {
+			conversationIDs = append(conversationIDs, conv.ConversationID)
+			groupCount++
+			if groupCount >= groupLimit {
+				break
+			}
+		}
+	}
+
+	return conversationIDs, nil
+}
+
+// syncRecentReadCursors syncs read cursors for all single chats and recent group chats
+func (c *Conversation) syncRecentReadCursors(ctx context.Context) {
+	conversationIDs, err := c.getConversationIDsForReadCursorSync(ctx, 10)
+	if err != nil {
+		log.ZWarn(ctx, "getConversationIDsForReadCursorSync err", err)
+		return
+	}
+	if len(conversationIDs) == 0 {
+		log.ZDebug(ctx, "No conversations to sync ReadCursors")
+		return
+	}
+	log.ZDebug(ctx, "syncRecentReadCursors", "count", len(conversationIDs))
+	if err := c.SyncReadCursors(ctx, conversationIDs); err != nil {
+		log.ZWarn(ctx, "SyncReadCursors err", err, "conversationIDs", conversationIDs)
+	}
+}
