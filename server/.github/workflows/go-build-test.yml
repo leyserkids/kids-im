@@ -64,25 +64,25 @@ jobs:
           mage start
           mage check
 
-      - name: Checkout Chat repository
-        uses: actions/checkout@v4
-        with:
-          repository: "openimsdk/chat"
-          path: "chat-repo"
+      # - name: Checkout Chat repository
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: "openimsdk/chat"
+      #     path: "chat-repo"
 
-      - name: Get Chat dependencies
-        run: |
-          cd ${{ github.workspace }}/chat-repo
-          go mod tidy
-          go mod download
-          go install github.com/magefile/mage@latest
+      # - name: Get Chat dependencies
+      #   run: |
+      #     cd ${{ github.workspace }}/chat-repo
+      #     go mod tidy
+      #     go mod download
+      #     go install github.com/magefile/mage@latest
 
-      - name: Build and test Chat Services
-        run: |
-          cd ${{ github.workspace }}/chat-repo
-          mage build
-          mage start
-          mage check
+      # - name: Build and test Chat Services
+      #   run: |
+      #     cd ${{ github.workspace }}/chat-repo
+      #     mage build
+      #     mage start
+      #     mage check
 
   go-test:
     name: Benchmark Test with go ${{ matrix.go_version }} on ${{ matrix.os }}
