@@ -1,69 +1,69 @@
 import { Database, QueryExecResult } from '@jlongster/sql.js';
 
-export type LocalGroupReadState = {
+export type LocalReadState = {
   conversationID: string;
-  minReadSeq: number;
+  allReadSeq: number;
 };
 
-export function localGroupReadState(db: Database): QueryExecResult[] {
+export function localReadState(db: Database): QueryExecResult[] {
   return db.exec(
     `
-      create table if not exists 'local_group_read_state' (
+      create table if not exists 'local_read_state' (
             'conversation_id' char(128),
-            'min_read_seq' integer default 0,
+            'all_read_seq' integer default 0,
             primary key ('conversation_id')
         )
     `
   );
 }
 
-export function getGroupReadState(
+export function getReadStateDB(
   db: Database,
   conversationID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      select * from local_group_read_state
+      select * from local_read_state
       where conversation_id = '${conversationID}'
       limit 1;
     `
   );
 }
 
-export function upsertGroupReadState(
+export function upsertReadStateDB(
   db: Database,
   stateJSON: string
 ): QueryExecResult[] {
-  const state = JSON.parse(stateJSON) as LocalGroupReadState;
+  const state = JSON.parse(stateJSON) as LocalReadState;
   return db.exec(
     `
-      insert or replace into local_group_read_state (conversation_id, min_read_seq)
-      values ('${state.conversationID}', ${state.minReadSeq || 0});
+      insert or replace into local_read_state (conversation_id, all_read_seq)
+      values ('${state.conversationID}', ${state.allReadSeq || 0});
     `
   );
 }
 
-export function updateGroupReadStateMinSeq(
+export function updateReadStateAllReadSeqDB(
   db: Database,
   conversationID: string,
-  minReadSeq: number
+  allReadSeq: number
 ): QueryExecResult[] {
   return db.exec(
     `
-      update local_group_read_state
-      set min_read_seq = ${minReadSeq}
+      update local_read_state
+      set all_read_seq = ${allReadSeq}
       where conversation_id = '${conversationID}';
     `
   );
 }
 
-export function deleteGroupReadState(
+export function deleteReadStateDB(
   db: Database,
   conversationID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      delete from local_group_read_state
+      delete from local_read_state
       where conversation_id = '${conversationID}';
     `
   );

@@ -1,15 +1,15 @@
 import { Database, QueryExecResult } from '@jlongster/sql.js';
 
-export type LocalGroupReadCursor = {
+export type LocalReadCursor = {
   conversationID: string;
   userID: string;
   maxReadSeq: number;
 };
 
-export function localGroupReadCursor(db: Database): QueryExecResult[] {
+export function localReadCursor(db: Database): QueryExecResult[] {
   return db.exec(
     `
-      create table if not exists 'local_group_read_cursor' (
+      create table if not exists 'local_read_cursor' (
             'conversation_id' char(128),
             'user_id' char(64),
             'max_read_seq' integer,
@@ -19,46 +19,46 @@ export function localGroupReadCursor(db: Database): QueryExecResult[] {
   );
 }
 
-export function insertGroupReadCursor(
+export function insertReadCursor(
   db: Database,
   cursorJSON: string
 ): QueryExecResult[] {
-  const cursor = JSON.parse(cursorJSON) as LocalGroupReadCursor;
+  const cursor = JSON.parse(cursorJSON) as LocalReadCursor;
   return db.exec(
     `
-      insert or replace into local_group_read_cursor (conversation_id, user_id, max_read_seq)
+      insert or replace into local_read_cursor (conversation_id, user_id, max_read_seq)
       values ('${cursor.conversationID}', '${cursor.userID}', ${cursor.maxReadSeq});
     `
   );
 }
 
-export function getGroupReadCursor(
+export function getReadCursor(
   db: Database,
   conversationID: string,
   userID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      select * from local_group_read_cursor
+      select * from local_read_cursor
       where conversation_id = '${conversationID}' and user_id = '${userID}'
       limit 1;
     `
   );
 }
 
-export function getGroupReadCursorsByConversationID(
+export function getReadCursorsByConversationID(
   db: Database,
   conversationID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      select * from local_group_read_cursor
+      select * from local_read_cursor
       where conversation_id = '${conversationID}';
     `
   );
 }
 
-export function updateGroupReadCursor(
+export function updateReadCursor(
   db: Database,
   conversationID: string,
   userID: string,
@@ -66,58 +66,58 @@ export function updateGroupReadCursor(
 ): QueryExecResult[] {
   return db.exec(
     `
-      update local_group_read_cursor
+      update local_read_cursor
       set max_read_seq = ${maxReadSeq}
       where conversation_id = '${conversationID}' and user_id = '${userID}';
     `
   );
 }
 
-export function deleteGroupReadCursor(
+export function deleteReadCursor(
   db: Database,
   conversationID: string,
   userID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      delete from local_group_read_cursor
+      delete from local_read_cursor
       where conversation_id = '${conversationID}' and user_id = '${userID}';
     `
   );
 }
 
-export function deleteGroupReadCursorsByConversationID(
+export function deleteReadCursorsByConversationID(
   db: Database,
   conversationID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      delete from local_group_read_cursor
+      delete from local_read_cursor
       where conversation_id = '${conversationID}';
     `
   );
 }
 
-export function upsertGroupReadCursor(
+export function upsertReadCursor(
   db: Database,
   cursorJSON: string
 ): QueryExecResult[] {
-  const cursor = JSON.parse(cursorJSON) as LocalGroupReadCursor;
+  const cursor = JSON.parse(cursorJSON) as LocalReadCursor;
   return db.exec(
     `
-      insert or replace into local_group_read_cursor (conversation_id, user_id, max_read_seq)
+      insert or replace into local_read_cursor (conversation_id, user_id, max_read_seq)
       values ('${cursor.conversationID}', '${cursor.userID}', ${cursor.maxReadSeq});
     `
   );
 }
 
-export function getMinReadSeqFromCursors(
+export function getAllReadSeqFromCursors(
   db: Database,
   conversationID: string
 ): QueryExecResult[] {
   return db.exec(
     `
-      select min(max_read_seq) as min_read_seq from local_group_read_cursor
+      select min(max_read_seq) as all_read_seq from local_read_cursor
       where conversation_id = '${conversationID}';
     `
   );

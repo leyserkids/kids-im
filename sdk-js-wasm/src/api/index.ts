@@ -622,38 +622,38 @@ export function initDatabaseAPI(isLogStandardOutput = true): void {
     'searchGroupMembersDB'
   );
 
-  // group read cursor
-  window.insertGroupReadCursor = registeMethodOnWindow('insertGroupReadCursor');
-  window.getGroupReadCursor = registeMethodOnWindow('getGroupReadCursor');
-  window.getGroupReadCursorsByConversationID = registeMethodOnWindow(
-    'getGroupReadCursorsByConversationID'
+  // read cursor
+  window.insertReadCursor = registeMethodOnWindow('insertReadCursor');
+  window.getReadCursor = registeMethodOnWindow('getReadCursor');
+  window.getReadCursorsByConversationID = registeMethodOnWindow(
+    'getReadCursorsByConversationID'
   );
-  window.updateGroupReadCursor = registeMethodOnWindow('updateGroupReadCursor');
-  window.deleteGroupReadCursor = registeMethodOnWindow('deleteGroupReadCursor');
-  window.deleteGroupReadCursorsByConversationID = registeMethodOnWindow(
-    'deleteGroupReadCursorsByConversationID'
+  window.updateReadCursor = registeMethodOnWindow('updateReadCursor');
+  window.deleteReadCursor = registeMethodOnWindow('deleteReadCursor');
+  window.deleteReadCursorsByConversationID = registeMethodOnWindow(
+    'deleteReadCursorsByConversationID'
   );
-  window.upsertGroupReadCursor = registeMethodOnWindow('upsertGroupReadCursor');
-  window.getMinReadSeqFromCursors = registeMethodOnWindow(
-    'getMinReadSeqFromCursors'
+  window.upsertReadCursor = registeMethodOnWindow('upsertReadCursor');
+  window.getAllReadSeqFromCursors = registeMethodOnWindow(
+    'getAllReadSeqFromCursors'
   );
-  // group read state
+  // read state
   // Use different names (with DB suffix) to avoid conflict with WASM API functions
-  window.getGroupReadStateDB = registeMethodOnWindow(
-    'getGroupReadState',
-    'getGroupReadStateDB'
+  window.getReadStateDB = registeMethodOnWindow(
+    'getReadStateDB',
+    'getReadStateDB'
   );
-  window.upsertGroupReadStateDB = registeMethodOnWindow(
-    'upsertGroupReadState',
-    'upsertGroupReadStateDB'
+  window.upsertReadStateDB = registeMethodOnWindow(
+    'upsertReadStateDB',
+    'upsertReadStateDB'
   );
-  window.updateGroupReadStateMinSeqDB = registeMethodOnWindow(
-    'updateGroupReadStateMinSeq',
-    'updateGroupReadStateMinSeqDB'
+  window.updateReadStateAllReadSeqDB = registeMethodOnWindow(
+    'updateReadStateAllReadSeqDB',
+    'updateReadStateAllReadSeqDB'
   );
-  window.deleteGroupReadStateDB = registeMethodOnWindow(
-    'deleteGroupReadState',
-    'deleteGroupReadStateDB'
+  window.deleteReadStateDB = registeMethodOnWindow(
+    'deleteReadStateDB',
+    'deleteReadStateDB'
   );
 
   // temp cache chat logs

@@ -8,7 +8,6 @@ import {
   GroupApplicationItem,
   GroupItem,
   GroupMemberItem,
-  GroupMessageReceiptInfo,
   MessageItem,
   ReceiptInfo,
   RevokedInfo,
@@ -40,7 +39,6 @@ export type EventDataMap = {
   [CbEvents.OnConversationUserInputStatusChanged]: ConversationInputStatus;
   [CbEvents.OnNewRecvMessageRevoked]: RevokedInfo;
   [CbEvents.OnRecvC2CReadReceipt]: ReceiptInfo[];
-  [CbEvents.OnRecvGroupReadReceipt]: GroupMessageReceiptInfo;
   [CbEvents.OnRecvNewMessage]: MessageItem;
   [CbEvents.OnRecvNewMessages]: MessageItem[];
   [CbEvents.OnRecvOfflineNewMessage]: MessageItem;
@@ -53,6 +51,10 @@ export type EventDataMap = {
   [CbEvents.OnSyncServerProgress]: number;
   [CbEvents.OnSyncServerFinish]: void;
   [CbEvents.OnTotalUnreadMessageCountChanged]: number;
+  [CbEvents.OnAllReadSeqChanged]: {
+    conversationID: string;
+    allReadSeq: number;
+  };
   [CbEvents.OnUserStatusChanged]: UserOnlineState;
   [CbEvents.OnConnectFailed]: void;
   [CbEvents.OnConnectSuccess]: void;

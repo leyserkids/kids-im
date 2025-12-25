@@ -1,27 +1,25 @@
 import { DatabaseErrorCode } from '@/constant';
 import {
-  insertGroupReadCursor as databaseInsertGroupReadCursor,
-  getGroupReadCursor as databaseGetGroupReadCursor,
-  getGroupReadCursorsByConversationID as databaseGetGroupReadCursorsByConversationID,
-  updateGroupReadCursor as databaseUpdateGroupReadCursor,
-  deleteGroupReadCursor as databaseDeleteGroupReadCursor,
-  deleteGroupReadCursorsByConversationID as databaseDeleteGroupReadCursorsByConversationID,
-  upsertGroupReadCursor as databaseUpsertGroupReadCursor,
-  getMinReadSeqFromCursors as databaseGetMinReadSeqFromCursors,
-  getGroupReadState as databaseGetGroupReadState,
-  upsertGroupReadState as databaseUpsertGroupReadState,
-  updateGroupReadStateMinSeq as databaseUpdateGroupReadStateMinSeq,
-  deleteGroupReadState as databaseDeleteGroupReadState,
+  insertReadCursor as databaseInsertReadCursor,
+  getReadCursor as databaseGetReadCursor,
+  getReadCursorsByConversationID as databaseGetReadCursorsByConversationID,
+  updateReadCursor as databaseUpdateReadCursor,
+  deleteReadCursor as databaseDeleteReadCursor,
+  deleteReadCursorsByConversationID as databaseDeleteReadCursorsByConversationID,
+  upsertReadCursor as databaseUpsertReadCursor,
+  getAllReadSeqFromCursors as databaseGetAllReadSeqFromCursors,
+  getReadStateDB as databaseGetReadState,
+  upsertReadStateDB as databaseUpsertReadState,
+  updateReadStateAllReadSeqDB as databaseUpdateReadStateAllReadSeq,
+  deleteReadStateDB as databaseDeleteReadState,
 } from '@/sqls';
 import { converSqlExecResult, formatResponse } from '@/utils';
 import { getInstance } from './instance';
 
-export async function insertGroupReadCursor(
-  cursorJSON: string
-): Promise<string> {
+export async function insertReadCursor(cursorJSON: string): Promise<string> {
   try {
     const db = await getInstance();
-    databaseInsertGroupReadCursor(db, cursorJSON);
+    databaseInsertReadCursor(db, cursorJSON);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -33,13 +31,13 @@ export async function insertGroupReadCursor(
   }
 }
 
-export async function getGroupReadCursor(
+export async function getReadCursor(
   conversationID: string,
   userID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    const execResult = databaseGetGroupReadCursor(db, conversationID, userID);
+    const execResult = databaseGetReadCursor(db, conversationID, userID);
 
     if (execResult.length === 0 || !execResult[0].values.length) {
       return formatResponse(
@@ -60,12 +58,12 @@ export async function getGroupReadCursor(
   }
 }
 
-export async function getGroupReadCursorsByConversationID(
+export async function getReadCursorsByConversationID(
   conversationID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    const execResult = databaseGetGroupReadCursorsByConversationID(
+    const execResult = databaseGetReadCursorsByConversationID(
       db,
       conversationID
     );
@@ -81,14 +79,14 @@ export async function getGroupReadCursorsByConversationID(
   }
 }
 
-export async function updateGroupReadCursor(
+export async function updateReadCursor(
   conversationID: string,
   userID: string,
   maxReadSeq: number
 ): Promise<string> {
   try {
     const db = await getInstance();
-    databaseUpdateGroupReadCursor(db, conversationID, userID, maxReadSeq);
+    databaseUpdateReadCursor(db, conversationID, userID, maxReadSeq);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -100,13 +98,13 @@ export async function updateGroupReadCursor(
   }
 }
 
-export async function deleteGroupReadCursor(
+export async function deleteReadCursor(
   conversationID: string,
   userID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    databaseDeleteGroupReadCursor(db, conversationID, userID);
+    databaseDeleteReadCursor(db, conversationID, userID);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -118,12 +116,12 @@ export async function deleteGroupReadCursor(
   }
 }
 
-export async function deleteGroupReadCursorsByConversationID(
+export async function deleteReadCursorsByConversationID(
   conversationID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    databaseDeleteGroupReadCursorsByConversationID(db, conversationID);
+    databaseDeleteReadCursorsByConversationID(db, conversationID);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -135,12 +133,10 @@ export async function deleteGroupReadCursorsByConversationID(
   }
 }
 
-export async function upsertGroupReadCursor(
-  cursorJSON: string
-): Promise<string> {
+export async function upsertReadCursor(cursorJSON: string): Promise<string> {
   try {
     const db = await getInstance();
-    databaseUpsertGroupReadCursor(db, cursorJSON);
+    databaseUpsertReadCursor(db, cursorJSON);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -152,19 +148,19 @@ export async function upsertGroupReadCursor(
   }
 }
 
-export async function getMinReadSeqFromCursors(
+export async function getAllReadSeqFromCursors(
   conversationID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    const execResult = databaseGetMinReadSeqFromCursors(db, conversationID);
+    const execResult = databaseGetAllReadSeqFromCursors(db, conversationID);
 
     if (execResult.length === 0 || !execResult[0].values.length) {
       return formatResponse(0);
     }
 
-    const minSeq = execResult[0].values[0][0] as number;
-    return formatResponse(minSeq || 0);
+    const allSeq = execResult[0].values[0][0] as number;
+    return formatResponse(allSeq || 0);
   } catch (e) {
     console.error(e);
     return formatResponse(
@@ -175,12 +171,10 @@ export async function getMinReadSeqFromCursors(
   }
 }
 
-export async function getGroupReadState(
-  conversationID: string
-): Promise<string> {
+export async function getReadStateDB(conversationID: string): Promise<string> {
   try {
     const db = await getInstance();
-    const execResult = databaseGetGroupReadState(db, conversationID);
+    const execResult = databaseGetReadState(db, conversationID);
 
     if (execResult.length === 0 || !execResult[0].values.length) {
       return formatResponse(
@@ -201,10 +195,10 @@ export async function getGroupReadState(
   }
 }
 
-export async function upsertGroupReadState(stateJSON: string): Promise<string> {
+export async function upsertReadStateDB(stateJSON: string): Promise<string> {
   try {
     const db = await getInstance();
-    databaseUpsertGroupReadState(db, stateJSON);
+    databaseUpsertReadState(db, stateJSON);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -216,13 +210,13 @@ export async function upsertGroupReadState(stateJSON: string): Promise<string> {
   }
 }
 
-export async function updateGroupReadStateMinSeq(
+export async function updateReadStateAllReadSeqDB(
   conversationID: string,
-  minReadSeq: number
+  allReadSeq: number
 ): Promise<string> {
   try {
     const db = await getInstance();
-    databaseUpdateGroupReadStateMinSeq(db, conversationID, minReadSeq);
+    databaseUpdateReadStateAllReadSeq(db, conversationID, allReadSeq);
     return formatResponse('');
   } catch (e) {
     console.error(e);
@@ -234,12 +228,12 @@ export async function updateGroupReadStateMinSeq(
   }
 }
 
-export async function deleteGroupReadState(
+export async function deleteReadStateDB(
   conversationID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    databaseDeleteGroupReadState(db, conversationID);
+    databaseDeleteReadState(db, conversationID);
     return formatResponse('');
   } catch (e) {
     console.error(e);

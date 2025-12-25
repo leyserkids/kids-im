@@ -194,20 +194,20 @@ import {
   batchInsertNotificationSeq,
   getExistedTables,
 
-  // group read cursor
-  insertGroupReadCursor,
-  getGroupReadCursor,
-  getGroupReadCursorsByConversationID,
-  updateGroupReadCursor,
-  deleteGroupReadCursor,
-  deleteGroupReadCursorsByConversationID,
-  upsertGroupReadCursor,
-  getMinReadSeqFromCursors,
-  // group read state
-  getGroupReadState,
-  upsertGroupReadState,
-  updateGroupReadStateMinSeq,
-  deleteGroupReadState,
+  // read cursor
+  insertReadCursor,
+  getReadCursor,
+  getReadCursorsByConversationID,
+  updateReadCursor,
+  deleteReadCursor,
+  deleteReadCursorsByConversationID,
+  upsertReadCursor,
+  getAllReadSeqFromCursors,
+  // read state
+  getReadStateDB,
+  upsertReadStateDB,
+  updateReadStateAllReadSeqDB,
+  deleteReadStateDB,
 } from '../api/database';
 
 import { getInstance } from './database/instance';
@@ -495,26 +495,26 @@ rpc.registerMethod('setNotificationSeq', setNotificationSeq);
 
 rpc.registerMethod('getExistedTables', getExistedTables);
 
-// group read cursor
-rpc.registerMethod('insertGroupReadCursor', insertGroupReadCursor);
-rpc.registerMethod('getGroupReadCursor', getGroupReadCursor);
+// read cursor
+rpc.registerMethod('insertReadCursor', insertReadCursor);
+rpc.registerMethod('getReadCursor', getReadCursor);
 rpc.registerMethod(
-  'getGroupReadCursorsByConversationID',
-  getGroupReadCursorsByConversationID
+  'getReadCursorsByConversationID',
+  getReadCursorsByConversationID
 );
-rpc.registerMethod('updateGroupReadCursor', updateGroupReadCursor);
-rpc.registerMethod('deleteGroupReadCursor', deleteGroupReadCursor);
+rpc.registerMethod('updateReadCursor', updateReadCursor);
+rpc.registerMethod('deleteReadCursor', deleteReadCursor);
 rpc.registerMethod(
-  'deleteGroupReadCursorsByConversationID',
-  deleteGroupReadCursorsByConversationID
+  'deleteReadCursorsByConversationID',
+  deleteReadCursorsByConversationID
 );
-rpc.registerMethod('upsertGroupReadCursor', upsertGroupReadCursor);
-rpc.registerMethod('getMinReadSeqFromCursors', getMinReadSeqFromCursors);
-// group read state
-rpc.registerMethod('getGroupReadState', getGroupReadState);
-rpc.registerMethod('upsertGroupReadState', upsertGroupReadState);
-rpc.registerMethod('updateGroupReadStateMinSeq', updateGroupReadStateMinSeq);
-rpc.registerMethod('deleteGroupReadState', deleteGroupReadState);
+rpc.registerMethod('upsertReadCursor', upsertReadCursor);
+rpc.registerMethod('getAllReadSeqFromCursors', getAllReadSeqFromCursors);
+// read state
+rpc.registerMethod('getReadStateDB', getReadStateDB);
+rpc.registerMethod('upsertReadStateDB', upsertReadStateDB);
+rpc.registerMethod('updateReadStateAllReadSeqDB', updateReadStateAllReadSeqDB);
+rpc.registerMethod('deleteReadStateDB', deleteReadStateDB);
 
 rpc.registerMethod('exec', async (sql: string) => {
   const db = await getInstance();

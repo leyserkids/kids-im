@@ -18,8 +18,8 @@ import {
   localSendingMessages,
   localAppSDKVersions,
   localVersionSyncs,
-  localGroupReadCursor,
-  localGroupReadState,
+  localReadCursor,
+  localReadState,
 } from '@/sqls';
 import { formatResponse } from '@/utils';
 import { QueryExecResult } from '@jlongster/sql.js';
@@ -64,8 +64,8 @@ export async function init(userId: string, dir: string): Promise<string> {
       localConversationUnreadMessages(db);
     const execResultLocalAppSDKVersions = localAppSDKVersions(db);
     const execResultLocalVersionSync = localVersionSyncs(db);
-    const execResultLocalGroupReadCursor = localGroupReadCursor(db);
-    const execResultLocalGroupReadState = localGroupReadState(db);
+    const execResultLocalReadCursor = localReadCursor(db);
+    const execResultLocalReadState = localReadState(db);
     alterTable(db);
     results.push(
       ...[
@@ -87,8 +87,8 @@ export async function init(userId: string, dir: string): Promise<string> {
         execResultLocalSendMessages,
         execResultLocalAppSDKVersions,
         execResultLocalVersionSync,
-        execResultLocalGroupReadCursor,
-        execResultLocalGroupReadState,
+        execResultLocalReadCursor,
+        execResultLocalReadState,
       ]
     );
 

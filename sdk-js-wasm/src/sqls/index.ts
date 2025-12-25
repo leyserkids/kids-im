@@ -18,5 +18,5 @@ export * from './localSendingMessages';
 export * from './localAppSdkVersion';
 export * from './localVersionSync';
 export * from './localTableMaster';
-export * from './localGroupReadCursor';
-export * from './localGroupReadCursorState';
+export * from './localReadCursor';
+export * from './localReadState';

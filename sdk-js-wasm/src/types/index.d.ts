@@ -236,20 +236,20 @@ declare global {
     updateGroupMemberField: DatabaseApi;
     searchGroupMembersDB: DatabaseApi;
 
-    // group read cursor
-    insertGroupReadCursor: DatabaseApi;
-    getGroupReadCursor: DatabaseApi;
-    getGroupReadCursorsByConversationID: DatabaseApi;
-    updateGroupReadCursor: DatabaseApi;
-    deleteGroupReadCursor: DatabaseApi;
-    deleteGroupReadCursorsByConversationID: DatabaseApi;
-    upsertGroupReadCursor: DatabaseApi;
-    getMinReadSeqFromCursors: DatabaseApi;
-    // group read state (with DB suffix to avoid conflict with WASM API functions)
-    getGroupReadStateDB: DatabaseApi;
-    upsertGroupReadStateDB: DatabaseApi;
-    updateGroupReadStateMinSeqDB: DatabaseApi;
-    deleteGroupReadStateDB: DatabaseApi;
+    // read cursor (unified for single/group chat)
+    insertReadCursor: DatabaseApi;
+    getReadCursor: DatabaseApi;
+    getReadCursorsByConversationID: DatabaseApi;
+    updateReadCursor: DatabaseApi;
+    deleteReadCursor: DatabaseApi;
+    deleteReadCursorsByConversationID: DatabaseApi;
+    upsertReadCursor: DatabaseApi;
+    getAllReadSeqFromCursors: DatabaseApi;
+    // read state (with DB suffix to avoid conflict with WASM API functions)
+    getReadStateDB: DatabaseApi;
+    upsertReadStateDB: DatabaseApi;
+    updateReadStateAllReadSeqDB: DatabaseApi;
+    deleteReadStateDB: DatabaseApi;
 
     // temp chche logs
     batchInsertTempCacheMessageList: DatabaseApi;
