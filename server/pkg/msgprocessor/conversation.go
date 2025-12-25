@@ -130,6 +130,20 @@ func GetGroupIDFromConversationID(conversationID string) string {
 	return ""
 }
 
+// GetSingleChatUserIDsFromConversationID extracts user IDs from a single chat conversation ID.
+// Format: si_userID1_userID2 (sorted alphabetically)
+// Returns empty slice if the conversationID is not a single chat conversation.
+func GetSingleChatUserIDsFromConversationID(conversationID string) []string {
+	if !strings.HasPrefix(conversationID, "si_") {
+		return nil
+	}
+	parts := strings.Split(strings.TrimPrefix(conversationID, "si_"), "_")
+	if len(parts) != 2 {
+		return nil
+	}
+	return parts
+}
+
 func IsNotificationByMsg(msg *sdkws.MsgData) bool {
 	return !Options(msg.Options).IsNotNotification()
 }
