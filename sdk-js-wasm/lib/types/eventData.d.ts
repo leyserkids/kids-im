@@ -1,5 +1,5 @@
 import { CbEvents } from '../constant';
-import { BlackUserItem, ConversationInputStatus, ConversationItem, FriendApplicationItem, FriendUserItem, GroupApplicationItem, GroupItem, GroupMemberItem, GroupMessageReceiptInfo, MessageItem, ReceiptInfo, RevokedInfo, SelfUserInfo, UserOnlineState } from './entity';
+import { BlackUserItem, ConversationInputStatus, ConversationItem, FriendApplicationItem, FriendUserItem, GroupApplicationItem, GroupItem, GroupMemberItem, MessageItem, ReceiptInfo, RevokedInfo, SelfUserInfo, UserOnlineState } from './entity';
 export declare type EventDataMap = {
     [CbEvents.OnProgress]: {
         progress: number;
@@ -27,7 +27,6 @@ export declare type EventDataMap = {
     [CbEvents.OnConversationUserInputStatusChanged]: ConversationInputStatus;
     [CbEvents.OnNewRecvMessageRevoked]: RevokedInfo;
     [CbEvents.OnRecvC2CReadReceipt]: ReceiptInfo[];
-    [CbEvents.OnRecvGroupReadReceipt]: GroupMessageReceiptInfo;
     [CbEvents.OnRecvNewMessage]: MessageItem;
     [CbEvents.OnRecvNewMessages]: MessageItem[];
     [CbEvents.OnRecvOfflineNewMessage]: MessageItem;
@@ -40,6 +39,10 @@ export declare type EventDataMap = {
     [CbEvents.OnSyncServerProgress]: number;
     [CbEvents.OnSyncServerFinish]: void;
     [CbEvents.OnTotalUnreadMessageCountChanged]: number;
+    [CbEvents.OnAllReadSeqChanged]: {
+        conversationID: string;
+        allReadSeq: number;
+    };
     [CbEvents.OnUserStatusChanged]: UserOnlineState;
     [CbEvents.OnConnectFailed]: void;
     [CbEvents.OnConnectSuccess]: void;

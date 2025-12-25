@@ -409,8 +409,7 @@ exports.CbEvents = void 0;
     CbEvents["OnRecvMessageRevoked"] = "OnRecvMessageRevoked";
     CbEvents["OnNewRecvMessageRevoked"] = "OnNewRecvMessageRevoked";
     CbEvents["OnRecvC2CReadReceipt"] = "OnRecvC2CReadReceipt";
-    CbEvents["OnRecvGroupReadReceipt"] = "OnRecvGroupReadReceipt";
-    CbEvents["OnGroupMinReadSeqChanged"] = "OnGroupMinReadSeqChanged";
+    CbEvents["OnAllReadSeqChanged"] = "OnAllReadSeqChanged";
     CbEvents["OnConversationChanged"] = "OnConversationChanged";
     CbEvents["OnNewConversation"] = "OnNewConversation";
     CbEvents["OnConversationUserInputStatusChanged"] = "OnConversationUserInputStatusChanged";
@@ -817,21 +816,21 @@ function initDatabaseAPI(isLogStandardOutput = true) {
     window.updateGroupMember = registeMethodOnWindow('updateGroupMember');
     window.updateGroupMemberField = registeMethodOnWindow('updateGroupMemberField');
     window.searchGroupMembersDB = registeMethodOnWindow('searchGroupMembers', 'searchGroupMembersDB');
-    // group read cursor
-    window.insertGroupReadCursor = registeMethodOnWindow('insertGroupReadCursor');
-    window.getGroupReadCursor = registeMethodOnWindow('getGroupReadCursor');
-    window.getGroupReadCursorsByConversationID = registeMethodOnWindow('getGroupReadCursorsByConversationID');
-    window.updateGroupReadCursor = registeMethodOnWindow('updateGroupReadCursor');
-    window.deleteGroupReadCursor = registeMethodOnWindow('deleteGroupReadCursor');
-    window.deleteGroupReadCursorsByConversationID = registeMethodOnWindow('deleteGroupReadCursorsByConversationID');
-    window.upsertGroupReadCursor = registeMethodOnWindow('upsertGroupReadCursor');
-    window.getMinReadSeqFromCursors = registeMethodOnWindow('getMinReadSeqFromCursors');
-    // group read state
+    // read cursor
+    window.insertReadCursor = registeMethodOnWindow('insertReadCursor');
+    window.getReadCursor = registeMethodOnWindow('getReadCursor');
+    window.getReadCursorsByConversationID = registeMethodOnWindow('getReadCursorsByConversationID');
+    window.updateReadCursor = registeMethodOnWindow('updateReadCursor');
+    window.deleteReadCursor = registeMethodOnWindow('deleteReadCursor');
+    window.deleteReadCursorsByConversationID = registeMethodOnWindow('deleteReadCursorsByConversationID');
+    window.upsertReadCursor = registeMethodOnWindow('upsertReadCursor');
+    window.getAllReadSeqFromCursors = registeMethodOnWindow('getAllReadSeqFromCursors');
+    // read state
     // Use different names (with DB suffix) to avoid conflict with WASM API functions
-    window.getGroupReadStateDB = registeMethodOnWindow('getGroupReadState', 'getGroupReadStateDB');
-    window.upsertGroupReadStateDB = registeMethodOnWindow('upsertGroupReadState', 'upsertGroupReadStateDB');
-    window.updateGroupReadStateMinSeqDB = registeMethodOnWindow('updateGroupReadStateMinSeq', 'updateGroupReadStateMinSeqDB');
-    window.deleteGroupReadStateDB = registeMethodOnWindow('deleteGroupReadState', 'deleteGroupReadStateDB');
+    window.getReadStateDB = registeMethodOnWindow('getReadStateDB', 'getReadStateDB');
+    window.upsertReadStateDB = registeMethodOnWindow('upsertReadStateDB', 'upsertReadStateDB');
+    window.updateReadStateAllReadSeqDB = registeMethodOnWindow('updateReadStateAllReadSeqDB', 'updateReadStateAllReadSeqDB');
+    window.deleteReadStateDB = registeMethodOnWindow('deleteReadStateDB', 'deleteReadStateDB');
     // temp cache chat logs
     window.batchInsertTempCacheMessageList = registeMethodOnWindow('batchInsertTempCacheMessageList');
     window.InsertTempCacheMessage = registeMethodOnWindow('InsertTempCacheMessage');
