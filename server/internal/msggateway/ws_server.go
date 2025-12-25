@@ -418,6 +418,12 @@ func (ws *WsServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	// Create a new connection context
 	connContext := newContext(w, r)
 
+	// Check if authClient is initialized (server may still be starting up)
+	if ws.authClient == nil {
+		httpError(connContext, errs.New("server is starting up, please retry later"))
+		return
+	}
+
 	// Check if the current number of online user connections exceeds the maximum limit
 	if ws.onlineUserConnNum.Load() >= ws.wsMaxConnNum {
 		// If it exceeds the maximum connection number, return an error via HTTP and stop processing
