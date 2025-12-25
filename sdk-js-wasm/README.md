@@ -1,3 +1,14 @@
+> ## 说明
+>
+> Fork 自 [openimsdk/openim-sdk-js-wasm](https://github.com/openimsdk/openim-sdk-js-wasm)
+>
+> 基于版本：`v3.8.3-patch.3`
+>
+> ### 修改记录
+> - 支持群已读，并统一单聊已读和群已读的实现方式
+
+---
+
 # JavaScript/TypeScript Client SDK for OpenIM 👨‍💻💬
 
 Use this SDK to add instant messaging capabilities to your application. By connecting to a self-hosted [OpenIM](https://www.openim.online/) server, you can quickly integrate instant messaging capabilities into your app with just a few lines of code.
