@@ -64,4 +64,4 @@ require (
 
 replace nhooyr.io/websocket => github.com/coder/websocket v1.8.10
 
-replace github.com/openimsdk/protocol => github.com/leyserkids/openim-protocol v0.0.72-kids.1
+replace github.com/openimsdk/protocol => github.com/leyserkids/openim-protocol v0.0.72-kids.5
