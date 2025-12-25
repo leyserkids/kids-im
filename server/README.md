@@ -1,3 +1,14 @@
+> ## 说明
+>
+> Fork 自 [openimsdk/open-im-server](https://github.com/openimsdk/open-im-server)
+>
+> 基于版本：`v3.8.3-patch.3`
+>
+> ### 修改记录
+> - 支持群已读，并统一单聊已读和群已读的实现方式
+
+---
+
 <p align="center">
     <a href="https://openim.io">
         <img src="./assets/logo-gif/openim-logo.gif" width="60%" height="30%"/>
