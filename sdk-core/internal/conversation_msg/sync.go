@@ -21,6 +21,7 @@ import (
 	"github.com/openimsdk/openim-sdk-core/v3/pkg/common"
 	"github.com/openimsdk/openim-sdk-core/v3/pkg/constant"
 	"github.com/openimsdk/openim-sdk-core/v3/pkg/db/model_struct"
+	"github.com/openimsdk/openim-sdk-core/v3/pkg/utils"
 	"github.com/openimsdk/protocol/msg"
 	"github.com/openimsdk/tools/utils/datautil"
 
@@ -150,32 +151,82 @@ func (c *Conversation) SyncReadCursors(ctx context.Context, conversationIDs []st
 	}
 
 	for _, convCursors := range resp.ConversationReadCursors {
+		conversationID := convCursors.ConversationID
+		var hasChanges bool
+
 		for _, cursor := range convCursors.Cursors {
 			localCursor := &model_struct.LocalReadCursor{
-				ConversationID: convCursors.ConversationID,
+				ConversationID: conversationID,
 				UserID:         cursor.UserID,
 				MaxReadSeq:     cursor.MaxReadSeq,
 			}
 			// Try to get existing cursor first
-			existingCursor, err := c.db.GetReadCursor(ctx, convCursors.ConversationID, cursor.UserID)
+			existingCursor, err := c.db.GetReadCursor(ctx, conversationID, cursor.UserID)
 			if err != nil {
 				// If not found, insert new cursor
 				if err := c.db.InsertReadCursor(ctx, localCursor); err != nil {
 					log.ZWarn(ctx, "InsertReadCursor err", err, "cursor", localCursor)
+				} else {
+					hasChanges = true
 				}
 			} else {
 				// If found and new seq is greater, update it
 				if cursor.MaxReadSeq > existingCursor.MaxReadSeq {
-					if err := c.db.UpdateReadCursor(ctx, convCursors.ConversationID, cursor.UserID, cursor.MaxReadSeq); err != nil {
+					if err := c.db.UpdateReadCursor(ctx, conversationID, cursor.UserID, cursor.MaxReadSeq); err != nil {
 						log.ZWarn(ctx, "UpdateReadCursor err", err, "cursor", localCursor)
+					} else {
+						hasChanges = true
 					}
 				}
 			}
+		}
+
+		// If any cursor changed, recalculate and update AllReadSeq
+		if hasChanges {
+			c.updateAllReadSeqAfterSync(ctx, conversationID)
 		}
 	}
 
 	log.ZDebug(ctx, "SyncReadCursors completed", "totalDuration", time.Since(startTime).Seconds())
 	return nil
+}
+
+// updateAllReadSeqAfterSync recalculates AllReadSeq after syncing cursors and triggers callback if changed
+func (c *Conversation) updateAllReadSeqAfterSync(ctx context.Context, conversationID string) {
+	// Calculate new AllReadSeq from all cursors
+	newAllReadSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID)
+	if err != nil {
+		log.ZWarn(ctx, "GetAllReadSeqFromCursors err", err, "conversationID", conversationID)
+		return
+	}
+
+	// Get current state
+	state, stateErr := c.db.GetReadState(ctx, conversationID)
+
+	var oldAllReadSeq int64
+	if stateErr == nil && state != nil {
+		oldAllReadSeq = state.AllReadSeq
+	}
+
+	// Update state if AllReadSeq changed
+	if newAllReadSeq != oldAllReadSeq {
+		newState := &model_struct.LocalReadState{
+			ConversationID: conversationID,
+			AllReadSeq:     newAllReadSeq,
+		}
+		if err := c.db.UpsertReadState(ctx, newState); err != nil {
+			log.ZWarn(ctx, "UpsertReadState err", err, "conversationID", conversationID)
+			return
+		}
+
+		// Trigger callback to notify frontend
+		c.msgListener().OnAllReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
+			"conversationID": conversationID,
+			"allReadSeq":     newAllReadSeq,
+		}))
+		log.ZDebug(ctx, "AllReadSeq changed after sync", "conversationID", conversationID,
+			"oldAllReadSeq", oldAllReadSeq, "newAllReadSeq", newAllReadSeq)
+	}
 }
 
 // getConversationIDsForReadCursorSync returns conversation IDs for ReadCursor sync:
