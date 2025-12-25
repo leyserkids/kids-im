@@ -37,9 +37,8 @@ jobs:
 
       - name: Set up infra services
         uses: hoverkraft-tech/compose-action@v2.0.1
-        # Uncomment and set the correct path to your docker-compose file
         with:
-          compose-file: "./docker-compose.yml"
+          compose-file: "./docker-compose.ci.yml"
 
         # run: |
         #   sudo docker compose up -d
@@ -131,7 +130,7 @@ jobs:
 
       - name: Start Server Services
         run: |
-          docker compose up -d
+          docker compose -f docker-compose.ci.yml up -d
           mage build
           mage start
           mage check
