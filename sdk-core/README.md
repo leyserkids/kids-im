@@ -1,3 +1,14 @@
+> ## 说明
+>
+> Fork 自 [openimsdk/openim-sdk-core](https://github.com/openimsdk/openim-sdk-core)
+>
+> 基于版本：`v3.8.3-patch.3`
+>
+> ### 修改记录
+> - 支持群已读，并统一单聊已读和群已读的实现方式
+
+---
+
 <h1 align="center" style="border-bottom: none">
     <b>
         <a href="https://doc.rentsoft.cn/sdks/introduction">openim-sdk-core</a><br>
