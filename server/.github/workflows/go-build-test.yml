@@ -105,7 +105,7 @@ jobs:
       - name: Checkout SDK repository
         uses: actions/checkout@v4
         with:
-          repository: 'openimsdk/openim-sdk-core'
+          repository: 'leyserkids/openim-sdk-core'
           path: ${{ env.SDK_DIR }}
 
       - name: Set up Go ${{ matrix.go_version }}
