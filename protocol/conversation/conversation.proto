@@ -304,6 +304,28 @@ message ClearUserConversationMsgResp {
   int32 count = 1;
 }
 
+// ReadCursor represents a user's read position in a conversation
+message ReadCursor {
+  string userID = 1;
+  int64 maxReadSeq = 2;
+}
+
+// ConversationReadCursors contains read cursors for a single conversation
+message ConversationReadCursors {
+  string conversationID = 1;
+  repeated ReadCursor cursors = 2;
+}
+
+// GetConversationReadCursorsReq request to get read cursors for conversations
+message GetConversationReadCursorsReq {
+  repeated string conversationIDs = 1;
+}
+
+// GetConversationReadCursorsResp response containing read cursors for conversations
+message GetConversationReadCursorsResp {
+  repeated ConversationReadCursors conversationReadCursors = 1;
+}
+
 service conversation {
   rpc GetConversation(GetConversationReq) returns (GetConversationResp);
   rpc GetSortedConversationList(GetSortedConversationListReq) returns (GetSortedConversationListResp);
@@ -329,4 +351,5 @@ service conversation {
   rpc GetNotNotifyConversationIDs(GetNotNotifyConversationIDsReq) returns (GetNotNotifyConversationIDsResp);
   rpc GetPinnedConversationIDs(GetPinnedConversationIDsReq) returns (GetPinnedConversationIDsResp);
   rpc ClearUserConversationMsg(ClearUserConversationMsgReq) returns (ClearUserConversationMsgResp);
+  rpc GetConversationReadCursors(GetConversationReadCursorsReq) returns (GetConversationReadCursorsResp);
 }
