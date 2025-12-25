@@ -224,6 +224,20 @@ func (c *Conversation) doUnreadCount(ctx context.Context, conversation *model_st
 	return nil
 }
 
+// doReadDrawing handles HasReadReceipt notifications (contentType 2200)
+//
+// This notification is triggered by the server in the following scenarios:
+//   - SetConversationHasReadSeq: User sets read position
+//   - MarkMsgsAsRead: User marks specific messages as read
+//   - MarkConversationAsRead: User marks entire conversation as read
+//
+// The notification target varies by conversation type:
+//   - SingleChat: Sent to the other party (告诉对方"我读了你的消息")
+//   - GroupChat: Sent to self only (同步自己在其他设备的已读状态)
+//
+// IMPORTANT: For group chats, MarkAsReadTips (2200) is only sent to SELF to sync read status.
+// The broadcast to OTHER group members uses GroupHasReadTips (2201), handled by doGroupReadDrawing.
+// Therefore, in group chat scenario, we should NOT update read cursors here - that's doGroupReadDrawing's job.
 func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) error {
 	tips := &sdkws.MarkAsReadTips{}
 	err := utils.UnmarshalNotificationElem(msg.Content, tips)
@@ -239,6 +253,8 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 
 	}
 	if tips.MarkAsReadUserID != c.loginUserID {
+		// Notification from another user - only applies to single chat
+		// For group chat, other users' read receipts come via GroupHasReadTips (2201)
 		switch conversation.ConversationType {
 		case constant.SingleChatType:
 			if len(tips.Seqs) == 0 {
@@ -280,44 +296,15 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 			c.msgListener().OnRecvC2CReadReceipt(utils.StructToJsonString(messageReceiptResp))
 
 		case constant.ReadGroupChatType:
-			maxReadSeq := tips.HasReadSeq
-			if maxReadSeq > 0 {
-				// Update cursor and calculate minReadSeq change
-				minReadSeqChanged, newMinReadSeq := c.updateGroupReadCursorAndMinSeq(ctx, tips.ConversationID, tips.MarkAsReadUserID, maxReadSeq)
-
-				// Notify frontend about group read receipt
-				var groupReceiptResp = []*sdk_struct.MessageReceipt{{
-					GroupID:     conversation.GroupID,
-					UserID:      tips.MarkAsReadUserID,
-					MsgIDList:   nil,
-					HasReadSeq:  tips.HasReadSeq,
-					SessionType: conversation.ConversationType,
-					ReadTime:    msg.SendTime,
-				}}
-				c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(groupReceiptResp))
-
-				// If minReadSeq changed, notify frontend for UI update
-				if minReadSeqChanged {
-					c.msgListener().OnGroupMinReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
-						"conversationID": tips.ConversationID,
-						"groupID":        conversation.GroupID,
-						"minReadSeq":     newMinReadSeq,
-					}))
-				}
-			} else {
-				var groupReceiptResp = []*sdk_struct.MessageReceipt{{
-					GroupID:     conversation.GroupID,
-					UserID:      tips.MarkAsReadUserID,
-					MsgIDList:   nil,
-					HasReadSeq:  tips.HasReadSeq,
-					SessionType: conversation.ConversationType,
-					ReadTime:    msg.SendTime,
-				}}
-				c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(groupReceiptResp))
-			}
+			// For group chat, MarkAsReadTips from other users should NOT happen here.
+			// The server sends GroupHasReadTips (2201) to broadcast other members' read status.
+			// If we somehow receive this, just log and ignore - don't update cursors.
+			log.ZWarn(ctx, "Unexpected MarkAsReadTips from other user in group chat, ignoring",
+				nil, "conversationID", tips.ConversationID, "markAsReadUserID", tips.MarkAsReadUserID)
 		}
 
 	} else {
+		// Notification about self's read action - sync from other devices
 		return c.doUnreadCount(ctx, conversation, tips.HasReadSeq, tips.Seqs)
 	}
 	return nil
@@ -338,14 +325,14 @@ func isRecordNotFoundError(err error) bool {
 	return errMsg == "record not found" || errMsg == "ErrRecordNotFound"
 }
 
-// updateGroupReadCursorAndMinSeq updates the group read cursor and recalculates minReadSeq if needed.
-// Returns (minReadSeqChanged, newMinReadSeq).
-func (c *Conversation) updateGroupReadCursorAndMinSeq(ctx context.Context, conversationID, userID string, maxReadSeq int64) (bool, int64) {
+// updateReadCursorAndAllReadSeq updates the read cursor and recalculates allReadSeq if needed.
+// Returns (allReadSeqChanged, newAllReadSeq).
+func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conversationID, userID string, maxReadSeq int64) (bool, int64) {
 	// Get current state
-	state, stateErr := c.db.GetGroupReadState(ctx, conversationID)
+	state, stateErr := c.db.GetReadState(ctx, conversationID)
 
 	// Get old cursor to check if this user was the min holder
-	oldCursor, cursorErr := c.db.GetGroupReadCursor(ctx, conversationID, userID)
+	oldCursor, cursorErr := c.db.GetReadCursor(ctx, conversationID, userID)
 	var oldReadSeq int64
 	var isNewCursor bool
 	if isRecordNotFoundError(cursorErr) {
@@ -357,78 +344,88 @@ func (c *Conversation) updateGroupReadCursorAndMinSeq(ctx context.Context, conve
 			return false, 0
 		}
 	} else {
-		log.ZWarn(ctx, "GetGroupReadCursor err", cursorErr, "conversationID", conversationID, "userID", userID)
+		log.ZWarn(ctx, "GetReadCursor err", cursorErr, "conversationID", conversationID, "userID", userID)
 		return false, 0
 	}
 
 	// Upsert the cursor
-	newCursor := &model_struct.LocalGroupReadCursor{
+	newCursor := &model_struct.LocalReadCursor{
 		ConversationID: conversationID,
 		UserID:         userID,
 		MaxReadSeq:     maxReadSeq,
 	}
-	if err := c.db.UpsertGroupReadCursor(ctx, newCursor); err != nil {
-		log.ZWarn(ctx, "UpsertGroupReadCursor err", err, "conversationID", conversationID, "userID", userID)
+	if err := c.db.UpsertReadCursor(ctx, newCursor); err != nil {
+		log.ZWarn(ctx, "UpsertReadCursor err", err, "conversationID", conversationID, "userID", userID)
 		return false, 0
 	}
 
-	// Calculate new minReadSeq
-	var minReadSeqChanged bool
-	var newMinReadSeq int64
+	// Calculate new allReadSeq
+	var allReadSeqChanged bool
+	var newAllReadSeq int64
 
 	if isRecordNotFoundError(stateErr) || state == nil {
-		// First time - need to calculate minReadSeq from scratch
-		minSeq, err := c.db.GetMinReadSeqFromCursors(ctx, conversationID)
+		// First time - need to calculate allReadSeq from scratch
+		allSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID)
 		if err != nil {
-			log.ZWarn(ctx, "GetMinReadSeqFromCursors err", err, "conversationID", conversationID)
+			log.ZWarn(ctx, "GetAllReadSeqFromCursors err", err, "conversationID", conversationID)
 			return false, 0
 		}
-		newMinReadSeq = minSeq
-		minReadSeqChanged = true
+		newAllReadSeq = allSeq
+		allReadSeqChanged = true
 
 		// Create new state
-		newState := &model_struct.LocalGroupReadState{
+		newState := &model_struct.LocalReadState{
 			ConversationID: conversationID,
-			MinReadSeq:     newMinReadSeq,
+			AllReadSeq:     newAllReadSeq,
 		}
-		if err := c.db.UpsertGroupReadState(ctx, newState); err != nil {
-			log.ZWarn(ctx, "UpsertGroupReadState err", err, "conversationID", conversationID)
+		if err := c.db.UpsertReadState(ctx, newState); err != nil {
+			log.ZWarn(ctx, "UpsertReadState err", err, "conversationID", conversationID)
 		}
 	} else if stateErr == nil {
-		// State exists - check if minReadSeq needs recalculation
+		// State exists - check if allReadSeq needs recalculation
 		if isNewCursor {
-			// New user added - minReadSeq may decrease
-			if maxReadSeq < state.MinReadSeq || state.MinReadSeq == 0 {
-				newMinReadSeq = maxReadSeq
-				minReadSeqChanged = true
+			// New user added - allReadSeq may decrease
+			if maxReadSeq < state.AllReadSeq || state.AllReadSeq == 0 {
+				newAllReadSeq = maxReadSeq
+				allReadSeqChanged = true
 			}
-		} else if oldReadSeq == state.MinReadSeq {
+		} else if oldReadSeq == state.AllReadSeq {
 			// The updated user was the min holder - need to recalculate
-			minSeq, err := c.db.GetMinReadSeqFromCursors(ctx, conversationID)
+			allSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID)
 			if err != nil {
-				log.ZWarn(ctx, "GetMinReadSeqFromCursors err", err, "conversationID", conversationID)
+				log.ZWarn(ctx, "GetAllReadSeqFromCursors err", err, "conversationID", conversationID)
 				return false, 0
 			}
-			if minSeq != state.MinReadSeq {
-				newMinReadSeq = minSeq
-				minReadSeqChanged = true
+			if allSeq != state.AllReadSeq {
+				newAllReadSeq = allSeq
+				allReadSeqChanged = true
 			}
 		}
-		// If this user wasn't the min holder and it's not a new cursor, minReadSeq stays the same
+		// If this user wasn't the min holder and it's not a new cursor, allReadSeq stays the same
 
-		if minReadSeqChanged {
-			state.MinReadSeq = newMinReadSeq
-			if err := c.db.UpsertGroupReadState(ctx, state); err != nil {
-				log.ZWarn(ctx, "UpsertGroupReadState err", err, "conversationID", conversationID)
+		if allReadSeqChanged {
+			state.AllReadSeq = newAllReadSeq
+			if err := c.db.UpsertReadState(ctx, state); err != nil {
+				log.ZWarn(ctx, "UpsertReadState err", err, "conversationID", conversationID)
 			}
 		}
 	}
 
-	return minReadSeqChanged, newMinReadSeq
+	return allReadSeqChanged, newAllReadSeq
 }
 
 // doGroupReadDrawing handles GroupHasReadReceipt notifications (contentType 2201)
-// This is triggered when another group member reads messages and the server broadcasts to all members
+//
+// This notification is triggered by the server's broadcastGroupHasReadReceipt function,
+// which is called when a group member marks the conversation as read (MarkConversationAsRead).
+//
+// Key differences from doReadDrawing (2200):
+//   - MarkAsReadTips (2200) for group chat is sent ONLY to SELF (for multi-device sync)
+//   - GroupHasReadTips (2201) is broadcast to ALL OTHER group members
+//
+// This function updates the read cursor for the user who read the messages,
+// and recalculates allReadSeq (the minimum read position across all members).
+// The allReadSeq is used by frontend to determine "all members have read up to this point".
 func (c *Conversation) doGroupReadDrawing(ctx context.Context, msg *sdkws.MsgData) error {
 	tips := &sdkws.GroupHasReadTips{}
 	err := utils.UnmarshalNotificationElem(msg.Content, tips)
@@ -443,7 +440,7 @@ func (c *Conversation) doGroupReadDrawing(ctx context.Context, msg *sdkws.MsgDat
 		return nil
 	}
 
-	conversation, err := c.db.GetConversation(ctx, tips.ConversationID)
+	_, err = c.db.GetConversation(ctx, tips.ConversationID)
 	if err != nil {
 		log.ZWarn(ctx, "GetConversation err", err, "conversationID", tips.ConversationID)
 		return err
@@ -451,39 +448,16 @@ func (c *Conversation) doGroupReadDrawing(ctx context.Context, msg *sdkws.MsgDat
 
 	maxReadSeq := tips.HasReadSeq
 	if maxReadSeq > 0 {
-		// Update cursor and calculate minReadSeq change
-		minReadSeqChanged, newMinReadSeq := c.updateGroupReadCursorAndMinSeq(ctx, tips.ConversationID, tips.UserID, maxReadSeq)
+		// Update cursor and calculate allReadSeq change
+		allReadSeqChanged, newAllReadSeq := c.updateReadCursorAndAllReadSeq(ctx, tips.ConversationID, tips.UserID, maxReadSeq)
 
-		// Notify frontend about group read receipt
-		var groupReceiptResp = []*sdk_struct.MessageReceipt{{
-			GroupID:     tips.GroupID,
-			UserID:      tips.UserID,
-			MsgIDList:   nil,
-			HasReadSeq:  tips.HasReadSeq,
-			SessionType: conversation.ConversationType,
-			ReadTime:    msg.SendTime,
-		}}
-		c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(groupReceiptResp))
-
-		// If minReadSeq changed, notify frontend for UI update
-		if minReadSeqChanged {
-			c.msgListener().OnGroupMinReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
+		// If allReadSeq changed, notify frontend for UI update
+		if allReadSeqChanged {
+			c.msgListener().OnAllReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
 				"conversationID": tips.ConversationID,
-				"groupID":        tips.GroupID,
-				"minReadSeq":     newMinReadSeq,
+				"allReadSeq":     newAllReadSeq,
 			}))
 		}
-	} else {
-		// Still notify about the read receipt even if hasReadSeq is 0
-		var groupReceiptResp = []*sdk_struct.MessageReceipt{{
-			GroupID:     tips.GroupID,
-			UserID:      tips.UserID,
-			MsgIDList:   nil,
-			HasReadSeq:  tips.HasReadSeq,
-			SessionType: conversation.ConversationType,
-			ReadTime:    msg.SendTime,
-		}}
-		c.msgListener().OnRecvGroupReadReceipt(utils.StructToJsonString(groupReceiptResp))
 	}
 
 	return nil

@@ -197,22 +197,22 @@ type TableMaster interface {
 	GetExistTables(ctx context.Context) ([]string, error)
 }
 
-type GroupReadCursorModel interface {
-	InsertGroupReadCursor(ctx context.Context, cursor *model_struct.LocalGroupReadCursor) error
-	UpsertGroupReadCursor(ctx context.Context, cursor *model_struct.LocalGroupReadCursor) error
-	UpdateGroupReadCursor(ctx context.Context, conversationID, userID string, maxReadSeq int64) error
-	GetGroupReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalGroupReadCursor, error)
-	GetGroupReadCursorsByConversationID(ctx context.Context, conversationID string) ([]*model_struct.LocalGroupReadCursor, error)
-	GetMinReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error)
-	DeleteGroupReadCursor(ctx context.Context, conversationID, userID string) error
-	DeleteGroupReadCursorsByConversationID(ctx context.Context, conversationID string) error
+type ReadCursorModel interface {
+	InsertReadCursor(ctx context.Context, cursor *model_struct.LocalReadCursor) error
+	UpsertReadCursor(ctx context.Context, cursor *model_struct.LocalReadCursor) error
+	UpdateReadCursor(ctx context.Context, conversationID, userID string, maxReadSeq int64) error
+	GetReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalReadCursor, error)
+	GetReadCursorsByConversationID(ctx context.Context, conversationID string) ([]*model_struct.LocalReadCursor, error)
+	GetAllReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error)
+	DeleteReadCursor(ctx context.Context, conversationID, userID string) error
+	DeleteReadCursorsByConversationID(ctx context.Context, conversationID string) error
 }
 
-type GroupReadStateModel interface {
-	GetGroupReadState(ctx context.Context, conversationID string) (*model_struct.LocalGroupReadState, error)
-	UpsertGroupReadState(ctx context.Context, state *model_struct.LocalGroupReadState) error
-	UpdateGroupReadStateMinSeq(ctx context.Context, conversationID string, minReadSeq int64) error
-	DeleteGroupReadState(ctx context.Context, conversationID string) error
+type ReadStateModel interface {
+	GetReadState(ctx context.Context, conversationID string) (*model_struct.LocalReadState, error)
+	UpsertReadState(ctx context.Context, state *model_struct.LocalReadState) error
+	UpdateReadStateAllReadSeq(ctx context.Context, conversationID string, allReadSeq int64) error
+	DeleteReadState(ctx context.Context, conversationID string) error
 }
 
 type DataBase interface {
@@ -228,6 +228,6 @@ type DataBase interface {
 	VersionSyncModel
 	AppSDKVersion
 	TableMaster
-	GroupReadCursorModel
-	GroupReadStateModel
+	ReadCursorModel
+	ReadStateModel
 }

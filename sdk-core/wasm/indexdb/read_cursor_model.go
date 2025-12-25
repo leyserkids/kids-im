@@ -25,35 +25,35 @@ import (
 	"github.com/openimsdk/openim-sdk-core/v3/wasm/exec"
 )
 
-type LocalGroupReadCursor struct {
+type LocalReadCursor struct {
 }
 
-func NewLocalGroupReadCursor() *LocalGroupReadCursor {
-	return &LocalGroupReadCursor{}
+func NewLocalReadCursor() *LocalReadCursor {
+	return &LocalReadCursor{}
 }
 
-func (l *LocalGroupReadCursor) InsertGroupReadCursor(ctx context.Context, cursor *model_struct.LocalGroupReadCursor) error {
+func (l *LocalReadCursor) InsertReadCursor(ctx context.Context, cursor *model_struct.LocalReadCursor) error {
 	_, err := exec.Exec(utils.StructToJsonString(cursor))
 	return err
 }
 
-func (l *LocalGroupReadCursor) UpsertGroupReadCursor(ctx context.Context, cursor *model_struct.LocalGroupReadCursor) error {
+func (l *LocalReadCursor) UpsertReadCursor(ctx context.Context, cursor *model_struct.LocalReadCursor) error {
 	_, err := exec.Exec(utils.StructToJsonString(cursor))
 	return err
 }
 
-func (l *LocalGroupReadCursor) UpdateGroupReadCursor(ctx context.Context, conversationID, userID string, maxReadSeq int64) error {
+func (l *LocalReadCursor) UpdateReadCursor(ctx context.Context, conversationID, userID string, maxReadSeq int64) error {
 	_, err := exec.Exec(conversationID, userID, maxReadSeq)
 	return err
 }
 
-func (l *LocalGroupReadCursor) GetGroupReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalGroupReadCursor, error) {
+func (l *LocalReadCursor) GetReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalReadCursor, error) {
 	cursor, err := exec.Exec(conversationID, userID)
 	if err != nil {
 		return nil, err
 	}
 	if v, ok := cursor.(string); ok {
-		result := model_struct.LocalGroupReadCursor{}
+		result := model_struct.LocalReadCursor{}
 		err := utils.JsonStringToStruct(v, &result)
 		if err != nil {
 			return nil, err
@@ -63,13 +63,13 @@ func (l *LocalGroupReadCursor) GetGroupReadCursor(ctx context.Context, conversat
 	return nil, exec.ErrType
 }
 
-func (l *LocalGroupReadCursor) GetGroupReadCursorsByConversationID(ctx context.Context, conversationID string) ([]*model_struct.LocalGroupReadCursor, error) {
+func (l *LocalReadCursor) GetReadCursorsByConversationID(ctx context.Context, conversationID string) ([]*model_struct.LocalReadCursor, error) {
 	cursorList, err := exec.Exec(conversationID)
 	if err != nil {
 		return nil, err
 	}
 	if v, ok := cursorList.(string); ok {
-		var result []*model_struct.LocalGroupReadCursor
+		var result []*model_struct.LocalReadCursor
 		err := utils.JsonStringToStruct(v, &result)
 		if err != nil {
 			return nil, err
@@ -79,23 +79,23 @@ func (l *LocalGroupReadCursor) GetGroupReadCursorsByConversationID(ctx context.C
 	return nil, exec.ErrType
 }
 
-func (l *LocalGroupReadCursor) GetMinReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error) {
-	minSeq, err := exec.Exec(conversationID)
+func (l *LocalReadCursor) GetAllReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error) {
+	allReadSeq, err := exec.Exec(conversationID)
 	if err != nil {
 		return 0, err
 	}
-	if v, ok := minSeq.(float64); ok {
+	if v, ok := allReadSeq.(float64); ok {
 		return int64(v), nil
 	}
 	return 0, exec.ErrType
 }
 
-func (l *LocalGroupReadCursor) DeleteGroupReadCursor(ctx context.Context, conversationID, userID string) error {
+func (l *LocalReadCursor) DeleteReadCursor(ctx context.Context, conversationID, userID string) error {
 	_, err := exec.Exec(conversationID, userID)
 	return err
 }
 
-func (l *LocalGroupReadCursor) DeleteGroupReadCursorsByConversationID(ctx context.Context, conversationID string) error {
+func (l *LocalReadCursor) DeleteReadCursorsByConversationID(ctx context.Context, conversationID string) error {
 	_, err := exec.Exec(conversationID)
 	return err
 }

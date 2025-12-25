@@ -749,14 +749,14 @@ func (c *Conversation) RevokeMessage(ctx context.Context, conversationID, client
 	return c.revokeOneMessage(ctx, conversationID, clientMsgID)
 }
 
-// GetGroupReadState returns the group read state including minReadSeq for O(1) "all read" status check.
-func (c *Conversation) GetGroupReadState(ctx context.Context, conversationID string) (*model_struct.LocalGroupReadState, error) {
-	return c.db.GetGroupReadState(ctx, conversationID)
+// GetReadState returns the read state including allReadSeq for O(1) "all read" status check.
+func (c *Conversation) GetReadState(ctx context.Context, conversationID string) (*model_struct.LocalReadState, error) {
+	return c.db.GetReadState(ctx, conversationID)
 }
 
-// GetGroupReadCursors returns all user read cursors for a group conversation.
-func (c *Conversation) GetGroupReadCursors(ctx context.Context, conversationID string) ([]*model_struct.LocalGroupReadCursor, error) {
-	return c.db.GetGroupReadCursorsByConversationID(ctx, conversationID)
+// GetReadCursors returns all user read cursors for a conversation.
+func (c *Conversation) GetReadCursors(ctx context.Context, conversationID string) ([]*model_struct.LocalReadCursor, error) {
+	return c.db.GetReadCursorsByConversationID(ctx, conversationID)
 }
 
 func (c *Conversation) TypingStatusUpdate(ctx context.Context, recvID, msgTip string) error {
@@ -1009,11 +1009,11 @@ func (c *Conversation) ChangeInputStates(ctx context.Context, conversationID str
 	return c.typing.ChangeInputStates(ctx, conversationID, focus)
 }
 
-// GetGroupMessageReaderList returns the list of users who have read the group messages
+// GetMessageReaderList returns the list of users who have read the messages
 // for a specific conversation. It fetches from local cache first, then from server if needed.
-func (c *Conversation) GetGroupMessageReaderList(ctx context.Context, conversationID string, seq int64) ([]*sdk_struct.GroupMessageReceipt, error) {
+func (c *Conversation) GetMessageReaderList(ctx context.Context, conversationID string, seq int64) ([]*sdk_struct.GroupMessageReceipt, error) {
 	// First try to get from local database
-	cursors, err := c.db.GetGroupReadCursorsByConversationID(ctx, conversationID)
+	cursors, err := c.db.GetReadCursorsByConversationID(ctx, conversationID)
 	if err != nil {
 		return nil, err
 	}
@@ -1031,16 +1031,16 @@ func (c *Conversation) GetGroupMessageReaderList(ctx context.Context, conversati
 	return result, nil
 }
 
-// GetGroupMessageReadMemberList returns the list of users who have read messages
-// up to the specified sequence number in a group conversation.
+// GetMessageReadMemberList returns the list of users who have read messages
+// up to the specified sequence number in a conversation.
 // This method syncs with server to get the latest read cursors.
-func (c *Conversation) GetGroupMessageReadMemberList(ctx context.Context, conversationID string, seq int64, syncFromServer bool) ([]*sdk_struct.GroupMessageReceipt, error) {
+func (c *Conversation) GetMessageReadMemberList(ctx context.Context, conversationID string, seq int64, syncFromServer bool) ([]*sdk_struct.GroupMessageReceipt, error) {
 	if syncFromServer {
 		// Sync from server first
-		if err := c.SyncGroupReadCursors(ctx, []string{conversationID}); err != nil {
+		if err := c.SyncReadCursors(ctx, []string{conversationID}); err != nil {
 			return nil, err
 		}
 	}
 
-	return c.GetGroupMessageReaderList(ctx, conversationID, seq)
+	return c.GetMessageReaderList(ctx, conversationID, seq)
 }

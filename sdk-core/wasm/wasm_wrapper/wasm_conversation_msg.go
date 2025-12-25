@@ -210,14 +210,14 @@ func (w *WrapperConMsg) RevokeMessage(_ js.Value, args []js.Value) interface{} {
 	return event_listener.NewCaller(open_im_sdk.RevokeMessage, callback, &args).AsyncCallWithCallback()
 }
 
-func (w *WrapperConMsg) GetGroupReadState(_ js.Value, args []js.Value) interface{} {
+func (w *WrapperConMsg) GetReadState(_ js.Value, args []js.Value) interface{} {
 	callback := event_listener.NewBaseCallback(utils.FirstLower(utils.GetSelfFuncName()), w.commonFunc)
-	return event_listener.NewCaller(open_im_sdk.GetGroupReadState, callback, &args).AsyncCallWithCallback()
+	return event_listener.NewCaller(open_im_sdk.GetReadState, callback, &args).AsyncCallWithCallback()
 }
 
-func (w *WrapperConMsg) GetGroupReadCursors(_ js.Value, args []js.Value) interface{} {
+func (w *WrapperConMsg) GetReadCursors(_ js.Value, args []js.Value) interface{} {
 	callback := event_listener.NewBaseCallback(utils.FirstLower(utils.GetSelfFuncName()), w.commonFunc)
-	return event_listener.NewCaller(open_im_sdk.GetGroupReadCursors, callback, &args).AsyncCallWithCallback()
+	return event_listener.NewCaller(open_im_sdk.GetReadCursors, callback, &args).AsyncCallWithCallback()
 }
 
 func (w *WrapperConMsg) TypingStatusUpdate(_ js.Value, args []js.Value) interface{} {

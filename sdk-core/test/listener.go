@@ -160,12 +160,8 @@ func (o *onAdvancedMsgListener) OnRecvC2CReadReceipt(msgReceiptList string) {
 	log.ZInfo(o.ctx, "OnRecvC2CReadReceipt", "msgReceiptList", msgReceiptList)
 }
 
-func (o *onAdvancedMsgListener) OnRecvGroupReadReceipt(groupMsgReceiptList string) {
-	log.ZInfo(o.ctx, "OnRecvGroupReadReceipt", "groupMsgReceiptList", groupMsgReceiptList)
-}
-
-func (o *onAdvancedMsgListener) OnGroupMinReadSeqChanged(minReadSeqInfo string) {
-	log.ZInfo(o.ctx, "OnGroupMinReadSeqChanged", "minReadSeqInfo", minReadSeqInfo)
+func (o *onAdvancedMsgListener) OnAllReadSeqChanged(allReadSeqInfo string) {
+	log.ZInfo(o.ctx, "OnAllReadSeqChanged", "allReadSeqInfo", allReadSeqInfo)
 }
 
 func (o *onAdvancedMsgListener) OnRecvMessageRevoked(msgID string) {

@@ -69,9 +69,8 @@ type OnConversationListener interface {
 
 type OnAdvancedMsgListener interface {
 	OnRecvNewMessage(message string)
-	OnRecvC2CReadReceipt(msgReceiptList string)
-	OnRecvGroupReadReceipt(groupMsgReceipt string)
-	OnGroupMinReadSeqChanged(minReadSeqInfo string) // New: notify when minReadSeq changes for "all read" status
+	OnRecvC2CReadReceipt(msgReceiptList string)         // Single chat read receipt (对方读了你的消息)
+	OnAllReadSeqChanged(allReadSeqInfo string)          // Group chat read receipt, notifies when allReadSeq changes (所有成员都已读到的位置)
 	OnNewRecvMessageRevoked(messageRevoked string)
 	OnRecvOfflineNewMessage(message string)
 	OnMsgDeleted(message string)

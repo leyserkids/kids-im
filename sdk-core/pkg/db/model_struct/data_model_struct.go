@@ -333,23 +333,26 @@ func (LocalAppSDKVersion) TableName() string {
 	return "local_app_sdk_version"
 }
 
-// LocalGroupReadCursor stores the read cursor (max read seq) for each user in a group conversation
-type LocalGroupReadCursor struct {
+// LocalReadCursor stores the read cursor (max read seq) for each user in a conversation
+// For single chat: only 1 record (the other party's read position)
+// For group chat: N records (one for each group member, excluding self)
+type LocalReadCursor struct {
 	ConversationID string `gorm:"column:conversation_id;primary_key;type:char(128)" json:"conversationID"`
 	UserID         string `gorm:"column:user_id;primary_key;type:char(64)" json:"userID"`
 	MaxReadSeq     int64  `gorm:"column:max_read_seq" json:"maxReadSeq"`
 }
 
-func (LocalGroupReadCursor) TableName() string {
-	return "local_group_read_cursor"
+func (LocalReadCursor) TableName() string {
+	return "local_read_cursor"
 }
 
-// LocalGroupReadState stores the group read state including minReadSeq for O(1) "all read" check
-type LocalGroupReadState struct {
+// LocalReadState stores the read state including allReadSeq for O(1) "all read" check
+// allReadSeq = the position that ALL members have read up to (minimum of all cursors)
+type LocalReadState struct {
 	ConversationID string `gorm:"column:conversation_id;primary_key;type:char(128)" json:"conversationID"`
-	MinReadSeq     int64  `gorm:"column:min_read_seq" json:"minReadSeq"` // Minimum readSeq across all group members
+	AllReadSeq     int64  `gorm:"column:all_read_seq" json:"allReadSeq"` // The seq that all members have read
 }
 
-func (LocalGroupReadState) TableName() string {
-	return "local_group_read_state"
+func (LocalReadState) TableName() string {
+	return "local_read_state"
 }

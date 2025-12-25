@@ -153,15 +153,15 @@ func RevokeMessage(callback open_im_sdk_callback.Base, operationID string, conve
 	call(callback, operationID, UserForSDK.Conversation().RevokeMessage, conversationID, clientMsgID)
 }
 
-// GetGroupReadState returns the group read state including minReadSeq for O(1) "all read" status check.
-func GetGroupReadState(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
-	call(callback, operationID, UserForSDK.Conversation().GetGroupReadState, conversationID)
+// GetReadState returns the read state including allReadSeq for O(1) "all read" status check.
+func GetReadState(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
+	call(callback, operationID, UserForSDK.Conversation().GetReadState, conversationID)
 }
 
-// GetGroupReadCursors returns all user read cursors for a group conversation.
+// GetReadCursors returns all user read cursors for a conversation.
 // Use this for displaying "who has read" list in the UI.
-func GetGroupReadCursors(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
-	call(callback, operationID, UserForSDK.Conversation().GetGroupReadCursors, conversationID)
+func GetReadCursors(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
+	call(callback, operationID, UserForSDK.Conversation().GetReadCursors, conversationID)
 }
 
 func TypingStatusUpdate(callback open_im_sdk_callback.Base, operationID string, recvID string, msgTip string) {
@@ -236,12 +236,12 @@ func GetInputStates(callback open_im_sdk_callback.Base, operationID string, conv
 	call(callback, operationID, UserForSDK.Conversation().GetInputStates, conversationID, userID)
 }
 
-// GetGroupMessageReaderList returns the list of users who have read messages up to the given seq
-func GetGroupMessageReaderList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64) {
-	call(callback, operationID, UserForSDK.Conversation().GetGroupMessageReaderList, conversationID, seq)
+// GetMessageReaderList returns the list of users who have read messages up to the given seq
+func GetMessageReaderList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64) {
+	call(callback, operationID, UserForSDK.Conversation().GetMessageReaderList, conversationID, seq)
 }
 
-// GetGroupMessageReadMemberList returns the list of users who have read messages up to the given seq, optionally syncing from server
-func GetGroupMessageReadMemberList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64, syncFromServer bool) {
-	call(callback, operationID, UserForSDK.Conversation().GetGroupMessageReadMemberList, conversationID, seq, syncFromServer)
+// GetMessageReadMemberList returns the list of users who have read messages up to the given seq, optionally syncing from server
+func GetMessageReadMemberList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64, syncFromServer bool) {
+	call(callback, operationID, UserForSDK.Conversation().GetMessageReadMemberList, conversationID, seq, syncFromServer)
 }

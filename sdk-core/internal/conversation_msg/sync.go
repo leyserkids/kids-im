@@ -135,13 +135,13 @@ func (c *Conversation) SyncAllConversationHashReadSeqs(ctx context.Context) erro
 	return nil
 }
 
-// SyncGroupReadCursors syncs group read cursors for the specified conversations
-func (c *Conversation) SyncGroupReadCursors(ctx context.Context, conversationIDs []string) error {
+// SyncReadCursors syncs read cursors for the specified conversations
+func (c *Conversation) SyncReadCursors(ctx context.Context, conversationIDs []string) error {
 	if len(conversationIDs) == 0 {
 		return nil
 	}
 	startTime := time.Now()
-	log.ZDebug(ctx, "start SyncGroupReadCursors", "conversationIDs", conversationIDs)
+	log.ZDebug(ctx, "start SyncReadCursors", "conversationIDs", conversationIDs)
 
 	resp, err := c.getConversationReadCursorsFromServer(ctx, conversationIDs)
 	if err != nil {
@@ -151,29 +151,29 @@ func (c *Conversation) SyncGroupReadCursors(ctx context.Context, conversationIDs
 
 	for _, convCursors := range resp.ConversationReadCursors {
 		for _, cursor := range convCursors.Cursors {
-			localCursor := &model_struct.LocalGroupReadCursor{
+			localCursor := &model_struct.LocalReadCursor{
 				ConversationID: convCursors.ConversationID,
 				UserID:         cursor.UserID,
 				MaxReadSeq:     cursor.MaxReadSeq,
 			}
 			// Try to get existing cursor first
-			existingCursor, err := c.db.GetGroupReadCursor(ctx, convCursors.ConversationID, cursor.UserID)
+			existingCursor, err := c.db.GetReadCursor(ctx, convCursors.ConversationID, cursor.UserID)
 			if err != nil {
 				// If not found, insert new cursor
-				if err := c.db.InsertGroupReadCursor(ctx, localCursor); err != nil {
-					log.ZWarn(ctx, "InsertGroupReadCursor err", err, "cursor", localCursor)
+				if err := c.db.InsertReadCursor(ctx, localCursor); err != nil {
+					log.ZWarn(ctx, "InsertReadCursor err", err, "cursor", localCursor)
 				}
 			} else {
 				// If found and new seq is greater, update it
 				if cursor.MaxReadSeq > existingCursor.MaxReadSeq {
-					if err := c.db.UpdateGroupReadCursor(ctx, convCursors.ConversationID, cursor.UserID, cursor.MaxReadSeq); err != nil {
-						log.ZWarn(ctx, "UpdateGroupReadCursor err", err, "cursor", localCursor)
+					if err := c.db.UpdateReadCursor(ctx, convCursors.ConversationID, cursor.UserID, cursor.MaxReadSeq); err != nil {
+						log.ZWarn(ctx, "UpdateReadCursor err", err, "cursor", localCursor)
 					}
 				}
 			}
 		}
 	}
 
-	log.ZDebug(ctx, "SyncGroupReadCursors completed", "totalDuration", time.Since(startTime).Seconds())
+	log.ZDebug(ctx, "SyncReadCursors completed", "totalDuration", time.Since(startTime).Seconds())
 	return nil
 }

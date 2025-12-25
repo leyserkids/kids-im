@@ -125,12 +125,10 @@ func (a AdvancedMsgCallback) OnRecvC2CReadReceipt(msgReceiptList string) {
 	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(msgReceiptList).SendMessage()
 }
 
-func (a AdvancedMsgCallback) OnRecvGroupReadReceipt(groupMsgReceiptList string) {
-	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(groupMsgReceiptList).SendMessage()
-}
-
-func (a AdvancedMsgCallback) OnGroupMinReadSeqChanged(minReadSeqInfo string) {
-	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(minReadSeqInfo).SendMessage()
+// OnAllReadSeqChanged notifies when allReadSeq changes for group chat
+// allReadSeq represents the minimum read position across all group members
+func (a AdvancedMsgCallback) OnAllReadSeqChanged(allReadSeqInfo string) {
+	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(allReadSeqInfo).SendMessage()
 }
 
 func (a AdvancedMsgCallback) OnRecvMessageRevoked(msgID string) {
