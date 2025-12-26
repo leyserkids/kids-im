@@ -220,12 +220,15 @@ func (m *msgServer) sendMarkAsReadNotification(ctx context.Context, conversation
 
 // broadcastGroupHasReadReceipt broadcasts group read receipt to all group members
 func (m *msgServer) broadcastGroupHasReadReceipt(ctx context.Context, conversationID string, userID string, hasReadSeq int64) {
+	log.ZDebug(ctx, "broadcastGroupHasReadReceipt called", "conversationID", conversationID, "userID", userID, "hasReadSeq", hasReadSeq)
+
 	// Extract groupID from conversationID
 	groupID := msgprocessor.GetGroupIDFromConversationID(conversationID)
 	if groupID == "" {
 		log.ZWarn(ctx, "broadcastGroupHasReadReceipt: failed to extract groupID", nil, "conversationID", conversationID)
 		return
 	}
+	log.ZDebug(ctx, "broadcastGroupHasReadReceipt: extracted groupID", "groupID", groupID)
 
 	// Get all group member userIDs
 	memberUserIDs, err := m.GroupLocalCache.GetGroupMemberIDs(ctx, groupID)
@@ -233,6 +236,7 @@ func (m *msgServer) broadcastGroupHasReadReceipt(ctx context.Context, conversati
 		log.ZWarn(ctx, "broadcastGroupHasReadReceipt: GetGroupMemberIDs failed", err, "groupID", groupID)
 		return
 	}
+	log.ZDebug(ctx, "broadcastGroupHasReadReceipt: got member IDs", "memberCount", len(memberUserIDs), "memberUserIDs", memberUserIDs)
 
 	tips := &sdkws.GroupHasReadTips{
 		GroupID:        groupID,
@@ -242,10 +246,14 @@ func (m *msgServer) broadcastGroupHasReadReceipt(ctx context.Context, conversati
 	}
 
 	// Send notification to all group members (except the sender)
+	var notifiedCount int
 	for _, memberUserID := range memberUserIDs {
 		if memberUserID == userID {
 			continue // Skip the sender
 		}
+		log.ZDebug(ctx, "broadcastGroupHasReadReceipt: sending notification", "from", userID, "to", memberUserID, "tips", tips)
 		m.notificationSender.NotificationWithSessionType(ctx, userID, memberUserID, constant.GroupHasReadReceipt, constant.SingleChatType, tips)
+		notifiedCount++
 	}
+	log.ZDebug(ctx, "broadcastGroupHasReadReceipt: completed", "notifiedCount", notifiedCount)
 }
