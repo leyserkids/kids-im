@@ -833,6 +833,21 @@ declare global {
       req: string
     ) => Promise<string>;
 
+    // read state subscription (WASM API)
+    subscribeConversationReadState: (
+      operationID: string,
+      conversationID: string
+    ) => Promise<string>;
+    unsubscribeConversationReadState: (
+      operationID: string,
+      conversationID: string
+    ) => Promise<string>;
+    getGroupMessageReadMemberList: (
+      operationID: string,
+      conversationID: string,
+      seq: number
+    ) => Promise<string>;
+
     signalingInvite: (...args) => Promise<string>;
     signalingInviteInGroup: (...args) => Promise<string>;
     signalingAccept: (...args) => Promise<string>;

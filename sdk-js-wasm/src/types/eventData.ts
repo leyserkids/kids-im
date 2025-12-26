@@ -51,7 +51,7 @@ export type EventDataMap = {
   [CbEvents.OnSyncServerProgress]: number;
   [CbEvents.OnSyncServerFinish]: void;
   [CbEvents.OnTotalUnreadMessageCountChanged]: number;
-  [CbEvents.OnAllReadSeqChanged]: {
+  [CbEvents.OnConversationReadStateChanged]: {
     conversationID: string;
     allReadSeq: number;
   };
