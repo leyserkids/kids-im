@@ -203,7 +203,7 @@ type ReadCursorModel interface {
 	UpdateReadCursor(ctx context.Context, conversationID, userID string, maxReadSeq int64) error
 	GetReadCursor(ctx context.Context, conversationID, userID string) (*model_struct.LocalReadCursor, error)
 	GetReadCursorsByConversationID(ctx context.Context, conversationID string) ([]*model_struct.LocalReadCursor, error)
-	GetAllReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error)
+	GetAllReadSeqFromCursors(ctx context.Context, conversationID string, excludeUserID string) (int64, error)
 	DeleteReadCursor(ctx context.Context, conversationID, userID string) error
 	DeleteReadCursorsByConversationID(ctx context.Context, conversationID string) error
 }

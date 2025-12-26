@@ -84,12 +84,13 @@ func (d *DataBase) GetReadCursorsByConversationID(ctx context.Context, conversat
 
 // GetAllReadSeqFromCursors gets the minimum read seq from all cursors in a conversation
 // This represents the position that ALL members have read up to
-func (d *DataBase) GetAllReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error) {
+// excludeUserID is the current logged-in user, whose cursor should be excluded from the calculation
+func (d *DataBase) GetAllReadSeqFromCursors(ctx context.Context, conversationID string, excludeUserID string) (int64, error) {
 	d.mRWMutex.RLock()
 	defer d.mRWMutex.RUnlock()
 	var allReadSeq int64
 	err := d.conn.WithContext(ctx).Model(&model_struct.LocalReadCursor{}).
-		Where("conversation_id = ?", conversationID).
+		Where("conversation_id = ? AND user_id != ?", conversationID, excludeUserID).
 		Select("COALESCE(MIN(max_read_seq), 0)").
 		Scan(&allReadSeq).Error
 	return allReadSeq, errs.WrapMsg(err, "GetAllReadSeqFromCursors failed")

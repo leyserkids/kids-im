@@ -79,8 +79,8 @@ func (l *LocalReadCursor) GetReadCursorsByConversationID(ctx context.Context, co
 	return nil, exec.ErrType
 }
 
-func (l *LocalReadCursor) GetAllReadSeqFromCursors(ctx context.Context, conversationID string) (int64, error) {
-	allReadSeq, err := exec.Exec(conversationID)
+func (l *LocalReadCursor) GetAllReadSeqFromCursors(ctx context.Context, conversationID string, excludeUserID string) (int64, error) {
+	allReadSeq, err := exec.Exec(conversationID, excludeUserID)
 	if err != nil {
 		return 0, err
 	}

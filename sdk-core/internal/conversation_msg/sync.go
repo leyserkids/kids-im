@@ -193,8 +193,9 @@ func (c *Conversation) SyncReadCursors(ctx context.Context, conversationIDs []st
 
 // updateAllReadSeqAfterSync recalculates AllReadSeq after syncing cursors and triggers callback if changed
 func (c *Conversation) updateAllReadSeqAfterSync(ctx context.Context, conversationID string) {
-	// Calculate new AllReadSeq from all cursors
-	newAllReadSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID)
+	// Calculate new AllReadSeq from all cursors, excluding self
+	// The allReadSeq represents the minimum read position of OTHER members
+	newAllReadSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID, c.loginUserID)
 	if err != nil {
 		log.ZWarn(ctx, "GetAllReadSeqFromCursors err", err, "conversationID", conversationID)
 		return

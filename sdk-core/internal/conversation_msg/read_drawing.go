@@ -272,6 +272,7 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 				return err
 			}
 			var successMsgIDs []string
+			var maxReadSeq int64
 			for _, message := range messages {
 				attachInfo := sdk_struct.AttachedInfoElem{}
 				_ = utils.JsonStringToStruct(message.AttachedInfo, &attachInfo)
@@ -289,11 +290,26 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 
 					}
 					successMsgIDs = append(successMsgIDs, message.ClientMsgID)
+					// Track the max seq for ReadCursor update
+					if message.Seq > maxReadSeq {
+						maxReadSeq = message.Seq
+					}
 				}
 			}
 			var messageReceiptResp = []*sdk_struct.MessageReceipt{{UserID: tips.MarkAsReadUserID, MsgIDList: successMsgIDs,
 				SessionType: conversation.ConversationType, ReadTime: msg.SendTime}}
 			c.msgListener().OnRecvC2CReadReceipt(utils.StructToJsonString(messageReceiptResp))
+
+			// Update ReadCursor and trigger OnAllReadSeqChanged for single chat
+			if maxReadSeq > 0 {
+				allReadSeqChanged, newAllReadSeq := c.updateReadCursorAndAllReadSeq(ctx, tips.ConversationID, tips.MarkAsReadUserID, maxReadSeq)
+				if allReadSeqChanged {
+					c.msgListener().OnAllReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
+						"conversationID": tips.ConversationID,
+						"allReadSeq":     newAllReadSeq,
+					}))
+				}
+			}
 
 		case constant.ReadGroupChatType:
 			// For group chat, MarkAsReadTips from other users should NOT happen here.
@@ -328,19 +344,24 @@ func isRecordNotFoundError(err error) bool {
 // updateReadCursorAndAllReadSeq updates the read cursor and recalculates allReadSeq if needed.
 // Returns (allReadSeqChanged, newAllReadSeq).
 func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conversationID, userID string, maxReadSeq int64) (bool, int64) {
+	log.ZDebug(ctx, "updateReadCursorAndAllReadSeq called",
+		"conversationID", conversationID, "userID", userID, "maxReadSeq", maxReadSeq)
+
 	// Get current state
 	state, stateErr := c.db.GetReadState(ctx, conversationID)
+	log.ZDebug(ctx, "GetReadState result", "state", state, "stateErr", stateErr)
 
-	// Get old cursor to check if this user was the min holder
+	// Get old cursor to check current state
 	oldCursor, cursorErr := c.db.GetReadCursor(ctx, conversationID, userID)
 	var oldReadSeq int64
-	var isNewCursor bool
 	if isRecordNotFoundError(cursorErr) {
-		isNewCursor = true
+		log.ZDebug(ctx, "Cursor not found, this is a new cursor", "userID", userID)
 	} else if cursorErr == nil {
 		oldReadSeq = oldCursor.MaxReadSeq
+		log.ZDebug(ctx, "Existing cursor found", "oldReadSeq", oldReadSeq)
 		// Skip if no change
 		if maxReadSeq <= oldReadSeq {
+			log.ZDebug(ctx, "maxReadSeq <= oldReadSeq, skipping", "maxReadSeq", maxReadSeq, "oldReadSeq", oldReadSeq)
 			return false, 0
 		}
 	} else {
@@ -358,22 +379,33 @@ func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conver
 		log.ZWarn(ctx, "UpsertReadCursor err", err, "conversationID", conversationID, "userID", userID)
 		return false, 0
 	}
+	log.ZDebug(ctx, "Cursor upserted successfully", "newCursor", newCursor)
 
-	// Calculate new allReadSeq
+	// Calculate new allReadSeq - always recalculate from cursors to ensure accuracy
 	var allReadSeqChanged bool
 	var newAllReadSeq int64
 
-	if isRecordNotFoundError(stateErr) || state == nil {
-		// First time - need to calculate allReadSeq from scratch
-		allSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID)
-		if err != nil {
-			log.ZWarn(ctx, "GetAllReadSeqFromCursors err", err, "conversationID", conversationID)
-			return false, 0
-		}
+	// Get current allReadSeq from all cursors, excluding self
+	// The allReadSeq represents the minimum read position of OTHER members
+	allSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID, c.loginUserID)
+	if err != nil {
+		log.ZWarn(ctx, "GetAllReadSeqFromCursors err", err, "conversationID", conversationID)
+		return false, 0
+	}
+	log.ZDebug(ctx, "Calculated allReadSeq from cursors", "allSeq", allSeq, "excludeUserID", c.loginUserID)
+
+	var oldAllReadSeq int64
+	if stateErr == nil && state != nil {
+		oldAllReadSeq = state.AllReadSeq
+	}
+
+	// Check if allReadSeq changed
+	if allSeq != oldAllReadSeq {
 		newAllReadSeq = allSeq
 		allReadSeqChanged = true
+		log.ZDebug(ctx, "AllReadSeq changed", "oldAllReadSeq", oldAllReadSeq, "newAllReadSeq", newAllReadSeq)
 
-		// Create new state
+		// Update state
 		newState := &model_struct.LocalReadState{
 			ConversationID: conversationID,
 			AllReadSeq:     newAllReadSeq,
@@ -381,34 +413,8 @@ func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conver
 		if err := c.db.UpsertReadState(ctx, newState); err != nil {
 			log.ZWarn(ctx, "UpsertReadState err", err, "conversationID", conversationID)
 		}
-	} else if stateErr == nil {
-		// State exists - check if allReadSeq needs recalculation
-		if isNewCursor {
-			// New user added - allReadSeq may decrease
-			if maxReadSeq < state.AllReadSeq || state.AllReadSeq == 0 {
-				newAllReadSeq = maxReadSeq
-				allReadSeqChanged = true
-			}
-		} else if oldReadSeq == state.AllReadSeq {
-			// The updated user was the min holder - need to recalculate
-			allSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID)
-			if err != nil {
-				log.ZWarn(ctx, "GetAllReadSeqFromCursors err", err, "conversationID", conversationID)
-				return false, 0
-			}
-			if allSeq != state.AllReadSeq {
-				newAllReadSeq = allSeq
-				allReadSeqChanged = true
-			}
-		}
-		// If this user wasn't the min holder and it's not a new cursor, allReadSeq stays the same
-
-		if allReadSeqChanged {
-			state.AllReadSeq = newAllReadSeq
-			if err := c.db.UpsertReadState(ctx, state); err != nil {
-				log.ZWarn(ctx, "UpsertReadState err", err, "conversationID", conversationID)
-			}
-		}
+	} else {
+		log.ZDebug(ctx, "AllReadSeq unchanged", "allSeq", allSeq, "oldAllReadSeq", oldAllReadSeq)
 	}
 
 	return allReadSeqChanged, newAllReadSeq
