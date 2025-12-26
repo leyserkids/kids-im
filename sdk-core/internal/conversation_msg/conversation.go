@@ -77,9 +77,6 @@ func (c *Conversation) getAdvancedHistoryMessageList(ctx context.Context, req sd
 		// Clear both maps when the user enters the conversation
 		c.messagePullForwardEndSeqMap.Delete(conversationID, req.ViewType)
 		c.messagePullReverseEndSeqMap.Delete(conversationID, req.ViewType)
-
-		// Sync read cursors when first entering a group conversation
-		c.syncReadCursorsOnEnter(ctx, conversationID)
 	}
 
 	log.ZDebug(ctx, "Assembly conversation parameters", "cost time", time.Since(t), "conversationID",
@@ -553,42 +550,3 @@ func (c *Conversation) filterMsg(temp *sdk_struct.MsgStruct, searchParam *sdk.Se
 	return false
 }
 
-// syncReadCursorsOnEnter syncs read cursors when entering a group conversation.
-// This is called asynchronously to avoid blocking the message list loading.
-func (c *Conversation) syncReadCursorsOnEnter(ctx context.Context, conversationID string) {
-	// Get conversation to check if it's a group chat
-	conversation, err := c.db.GetConversation(ctx, conversationID)
-	if err != nil {
-		log.ZWarn(ctx, "syncReadCursorsOnEnter: GetConversation failed", err, "conversationID", conversationID)
-		return
-	}
-
-	// Only sync for group conversations
-	if conversation.ConversationType != constant.ReadGroupChatType {
-		return
-	}
-
-	// Sync asynchronously to avoid blocking
-	go func() {
-		syncCtx := context.Background()
-		if err := c.SyncReadCursors(syncCtx, []string{conversationID}); err != nil {
-			log.ZWarn(syncCtx, "syncReadCursorsOnEnter: SyncReadCursors failed", err, "conversationID", conversationID)
-			return
-		}
-
-		// After sync, get the current state and notify frontend
-		state, err := c.db.GetReadState(syncCtx, conversationID)
-		if err != nil {
-			if !isRecordNotFoundError(err) {
-				log.ZWarn(syncCtx, "syncReadCursorsOnEnter: GetReadState failed", err, "conversationID", conversationID)
-			}
-			return
-		}
-
-		// Notify frontend about the initial allReadSeq
-		c.msgListener().OnAllReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
-			"conversationID": conversationID,
-			"allReadSeq":     state.AllReadSeq,
-		}))
-	}()
-}

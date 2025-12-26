@@ -77,6 +77,10 @@ type Conversation struct {
 	startTime time.Time
 
 	typing *typing
+
+	// 已订阅 allReadSeq 变化的会话集合（内存中，不持久化）
+	subscribedConversations   map[string]struct{} // use as set
+	subscribedConversationsMu sync.RWMutex
 }
 
 func (c *Conversation) SetMsgListener(msgListener func() open_im_sdk_callback.OnAdvancedMsgListener) {
@@ -914,4 +918,49 @@ func (c *Conversation) getUserNameAndFaceURL(ctx context.Context, userID string)
 		return "", "", nil
 	}
 	return userInfo.FaceURL, userInfo.Nickname, nil
+}
+
+// SubscribeConversationReadState 订阅会话的 ReadState 变化
+// 返回本地数据库中的当前值，无数据时返回 0
+func (c *Conversation) SubscribeConversationReadState(ctx context.Context, conversationID string) (int64, error) {
+	c.subscribedConversationsMu.Lock()
+	if c.subscribedConversations == nil {
+		c.subscribedConversations = make(map[string]struct{})
+	}
+	c.subscribedConversations[conversationID] = struct{}{}
+	c.subscribedConversationsMu.Unlock()
+
+	// 查询本地数据库，无数据时返回 0
+	state, err := c.db.GetReadState(ctx, conversationID)
+	if err != nil || state == nil {
+		return 0, nil
+	}
+	return state.AllReadSeq, nil
+}
+
+// UnsubscribeConversationReadState 取消订阅
+func (c *Conversation) UnsubscribeConversationReadState(ctx context.Context, conversationID string) error {
+	c.subscribedConversationsMu.Lock()
+	delete(c.subscribedConversations, conversationID)
+	c.subscribedConversationsMu.Unlock()
+	return nil
+}
+
+// isConversationSubscribed 检查会话是否已订阅
+func (c *Conversation) isConversationSubscribed(conversationID string) bool {
+	c.subscribedConversationsMu.RLock()
+	defer c.subscribedConversationsMu.RUnlock()
+	_, ok := c.subscribedConversations[conversationID]
+	return ok
+}
+
+// getSubscribedConversations 获取所有已订阅的会话
+func (c *Conversation) getSubscribedConversations() []string {
+	c.subscribedConversationsMu.RLock()
+	defer c.subscribedConversationsMu.RUnlock()
+	result := make([]string, 0, len(c.subscribedConversations))
+	for convID := range c.subscribedConversations {
+		result = append(result, convID)
+	}
+	return result
 }

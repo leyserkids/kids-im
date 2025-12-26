@@ -241,7 +241,20 @@ func GetMessageReaderList(callback open_im_sdk_callback.Base, operationID string
 	call(callback, operationID, UserForSDK.Conversation().GetMessageReaderList, conversationID, seq)
 }
 
-// GetMessageReadMemberList returns the list of users who have read messages up to the given seq, optionally syncing from server
-func GetMessageReadMemberList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64, syncFromServer bool) {
-	call(callback, operationID, UserForSDK.Conversation().GetMessageReadMemberList, conversationID, seq, syncFromServer)
+// GetGroupMessageReadMemberList returns the list of group members who have read messages up to the given seq.
+// This is for group chat only - returns data from local database.
+func GetGroupMessageReadMemberList(callback open_im_sdk_callback.Base, operationID string, conversationID string, seq int64) {
+	call(callback, operationID, UserForSDK.Conversation().GetGroupMessageReadMemberList, conversationID, seq)
+}
+
+// SubscribeConversationReadState subscribes to ReadState changes for a conversation.
+// Returns the current allReadSeq value (0 if no data).
+// Subsequent changes will be notified via OnConversationReadStateChanged callback.
+func SubscribeConversationReadState(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
+	call(callback, operationID, UserForSDK.Conversation().SubscribeConversationReadState, conversationID)
+}
+
+// UnsubscribeConversationReadState unsubscribes from ReadState changes for a conversation.
+func UnsubscribeConversationReadState(callback open_im_sdk_callback.Base, operationID string, conversationID string) {
+	call(callback, operationID, UserForSDK.Conversation().UnsubscribeConversationReadState, conversationID)
 }

@@ -205,9 +205,9 @@ func (e *emptyAdvancedMsgListener) OnRecvC2CReadReceipt(msgReceiptList string) {
 		"msgReceiptList", msgReceiptList)
 }
 
-func (e *emptyAdvancedMsgListener) OnAllReadSeqChanged(allReadSeqInfo string) {
+func (e *emptyAdvancedMsgListener) OnConversationReadStateChanged(readStateInfo string) {
 	log.ZWarn(e.ctx, "AdvancedMsgListener is not implemented", nil,
-		"allReadSeqInfo", allReadSeqInfo)
+		"readStateInfo", readStateInfo)
 }
 
 func (e *emptyAdvancedMsgListener) OnNewRecvMessageRevoked(messageRevoked string) {

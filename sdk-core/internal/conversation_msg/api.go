@@ -1031,15 +1031,17 @@ func (c *Conversation) GetMessageReaderList(ctx context.Context, conversationID 
 	return result, nil
 }
 
-// GetMessageReadMemberList returns the list of users who have read messages
-// up to the specified sequence number in a conversation.
-// This method syncs with server to get the latest read cursors.
-func (c *Conversation) GetMessageReadMemberList(ctx context.Context, conversationID string, seq int64, syncFromServer bool) ([]*sdk_struct.GroupMessageReceipt, error) {
-	if syncFromServer {
-		// Sync from server first
-		if err := c.SyncReadCursors(ctx, []string{conversationID}); err != nil {
-			return nil, err
-		}
+// GetGroupMessageReadMemberList returns the list of group members who have read messages
+// up to the specified sequence number in a group conversation.
+// This method is for group chat only - returns data from local database.
+func (c *Conversation) GetGroupMessageReadMemberList(ctx context.Context, conversationID string, seq int64) ([]*sdk_struct.GroupMessageReceipt, error) {
+	// Check if it's a group conversation
+	conversation, err := c.db.GetConversation(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	if conversation.ConversationType != constant.ReadGroupChatType {
+		return nil, errs.New("GetGroupMessageReadMemberList is only for group conversations").Wrap()
 	}
 
 	return c.GetMessageReaderList(ctx, conversationID, seq)

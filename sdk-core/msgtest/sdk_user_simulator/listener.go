@@ -106,7 +106,7 @@ func (m *MsgListenerCallBak) OnRecvMessageExtensionsAdded(msgID string, reaction
 
 }
 
-func (m *MsgListenerCallBak) OnAllReadSeqChanged(allReadSeqInfo string) {
+func (m *MsgListenerCallBak) OnConversationReadStateChanged(readStateInfo string) {
 }
 func (m *MsgListenerCallBak) OnNewRecvMessageRevoked(messageRevoked string) {
 }

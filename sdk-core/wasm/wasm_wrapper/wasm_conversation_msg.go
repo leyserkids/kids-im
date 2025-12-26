@@ -220,6 +220,16 @@ func (w *WrapperConMsg) GetReadCursors(_ js.Value, args []js.Value) interface{} 
 	return event_listener.NewCaller(open_im_sdk.GetReadCursors, callback, &args).AsyncCallWithCallback()
 }
 
+func (w *WrapperConMsg) SubscribeConversationReadState(_ js.Value, args []js.Value) interface{} {
+	callback := event_listener.NewBaseCallback(utils.FirstLower(utils.GetSelfFuncName()), w.commonFunc)
+	return event_listener.NewCaller(open_im_sdk.SubscribeConversationReadState, callback, &args).AsyncCallWithCallback()
+}
+
+func (w *WrapperConMsg) UnsubscribeConversationReadState(_ js.Value, args []js.Value) interface{} {
+	callback := event_listener.NewBaseCallback(utils.FirstLower(utils.GetSelfFuncName()), w.commonFunc)
+	return event_listener.NewCaller(open_im_sdk.UnsubscribeConversationReadState, callback, &args).AsyncCallWithCallback()
+}
+
 func (w *WrapperConMsg) TypingStatusUpdate(_ js.Value, args []js.Value) interface{} {
 	callback := event_listener.NewBaseCallback(utils.FirstLower(utils.GetSelfFuncName()), w.commonFunc)
 	return event_listener.NewCaller(open_im_sdk.TypingStatusUpdate, callback, &args).AsyncCallWithCallback()

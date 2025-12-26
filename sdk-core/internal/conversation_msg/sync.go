@@ -155,6 +155,11 @@ func (c *Conversation) SyncReadCursors(ctx context.Context, conversationIDs []st
 		var hasChanges bool
 
 		for _, cursor := range convCursors.Cursors {
+			// Skip current login user's cursor - we don't need to track our own read position
+			if cursor.UserID == c.loginUserID {
+				continue
+			}
+
 			localCursor := &model_struct.LocalReadCursor{
 				ConversationID: conversationID,
 				UserID:         cursor.UserID,
@@ -181,9 +186,9 @@ func (c *Conversation) SyncReadCursors(ctx context.Context, conversationIDs []st
 			}
 		}
 
-		// If any cursor changed, recalculate and update AllReadSeq
+		// If any cursor changed, recalculate and update ReadState
 		if hasChanges {
-			c.updateAllReadSeqAfterSync(ctx, conversationID)
+			c.updateReadStateAfterSync(ctx, conversationID)
 		}
 	}
 
@@ -191,8 +196,8 @@ func (c *Conversation) SyncReadCursors(ctx context.Context, conversationIDs []st
 	return nil
 }
 
-// updateAllReadSeqAfterSync recalculates AllReadSeq after syncing cursors and triggers callback if changed
-func (c *Conversation) updateAllReadSeqAfterSync(ctx context.Context, conversationID string) {
+// updateReadStateAfterSync recalculates ReadState after syncing cursors and triggers callback if changed
+func (c *Conversation) updateReadStateAfterSync(ctx context.Context, conversationID string) {
 	// Calculate new AllReadSeq from all cursors, excluding self
 	// The allReadSeq represents the minimum read position of OTHER members
 	newAllReadSeq, err := c.db.GetAllReadSeqFromCursors(ctx, conversationID, c.loginUserID)
@@ -220,66 +225,70 @@ func (c *Conversation) updateAllReadSeqAfterSync(ctx context.Context, conversati
 			return
 		}
 
-		// Trigger callback to notify frontend
-		c.msgListener().OnAllReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
-			"conversationID": conversationID,
-			"allReadSeq":     newAllReadSeq,
-		}))
-		log.ZDebug(ctx, "AllReadSeq changed after sync", "conversationID", conversationID,
+		// Trigger callback for subscribed conversation
+		c.checkAndNotifyReadStateChanged(ctx, conversationID)
+		log.ZDebug(ctx, "ReadState changed after sync", "conversationID", conversationID,
 			"oldAllReadSeq", oldAllReadSeq, "newAllReadSeq", newAllReadSeq)
 	}
 }
 
-// getConversationIDsForReadCursorSync returns conversation IDs for ReadCursor sync:
-// - All single chat conversations
-// - Top N most recent (by latest_msg_send_time) group chat conversations
-func (c *Conversation) getConversationIDsForReadCursorSync(ctx context.Context, groupLimit int) ([]string, error) {
-	// Get all single chat conversations
+// syncAllReadCursors syncs read cursors for all conversations (single chat + group chat)
+// Called on connection/reconnection to ensure read state is up to date
+func (c *Conversation) syncAllReadCursors(ctx context.Context) {
 	allConversations, err := c.db.GetAllConversations(ctx)
 	if err != nil {
-		return nil, err
+		log.ZWarn(ctx, "GetAllConversations err", err)
+		return
 	}
 
 	var conversationIDs []string
 	for _, conv := range allConversations {
-		if conv.ConversationType == constant.SingleChatType {
+		if conv.ConversationType == constant.SingleChatType ||
+			conv.ConversationType == constant.ReadGroupChatType {
 			conversationIDs = append(conversationIDs, conv.ConversationID)
 		}
 	}
 
-	// Get recent group conversations (ordered by latest_msg_send_time desc)
-	recentConversations, err := c.db.GetConversationListSplitDB(ctx, 0, groupLimit*3)
-	if err != nil {
-		return nil, err
-	}
-
-	var groupCount int
-	for _, conv := range recentConversations {
-		if conv.ConversationType == constant.ReadGroupChatType {
-			conversationIDs = append(conversationIDs, conv.ConversationID)
-			groupCount++
-			if groupCount >= groupLimit {
-				break
-			}
-		}
-	}
-
-	return conversationIDs, nil
-}
-
-// syncRecentReadCursors syncs read cursors for all single chats and recent group chats
-func (c *Conversation) syncRecentReadCursors(ctx context.Context) {
-	conversationIDs, err := c.getConversationIDsForReadCursorSync(ctx, 10)
-	if err != nil {
-		log.ZWarn(ctx, "getConversationIDsForReadCursorSync err", err)
-		return
-	}
 	if len(conversationIDs) == 0 {
 		log.ZDebug(ctx, "No conversations to sync ReadCursors")
 		return
 	}
-	log.ZDebug(ctx, "syncRecentReadCursors", "count", len(conversationIDs))
+
+	log.ZDebug(ctx, "syncAllReadCursors", "count", len(conversationIDs))
 	if err := c.SyncReadCursors(ctx, conversationIDs); err != nil {
 		log.ZWarn(ctx, "SyncReadCursors err", err, "conversationIDs", conversationIDs)
 	}
+
+	// Notify all subscribed conversations about their ReadState
+	c.notifySubscribedConversationsReadStateChanged(ctx)
+}
+
+// notifyConversationReadStateChanged notifies a single conversation's ReadState change
+func (c *Conversation) notifyConversationReadStateChanged(ctx context.Context, conversationID string) {
+	state, err := c.db.GetReadState(ctx, conversationID)
+	var allReadSeq int64
+	if err == nil && state != nil {
+		allReadSeq = state.AllReadSeq
+	}
+
+	c.msgListener().OnConversationReadStateChanged(utils.StructToJsonString(map[string]interface{}{
+		"conversationID": conversationID,
+		"allReadSeq":     allReadSeq,
+	}))
+}
+
+// notifySubscribedConversationsReadStateChanged notifies all subscribed conversations about their ReadState
+// Called after reconnection sync
+func (c *Conversation) notifySubscribedConversationsReadStateChanged(ctx context.Context) {
+	for _, convID := range c.getSubscribedConversations() {
+		c.notifyConversationReadStateChanged(ctx, convID)
+	}
+}
+
+// checkAndNotifyReadStateChanged checks if the conversation is subscribed and triggers callback if so
+func (c *Conversation) checkAndNotifyReadStateChanged(ctx context.Context, conversationID string) {
+	if !c.isConversationSubscribed(conversationID) {
+		return // Not subscribed, no callback
+	}
+	c.notifyConversationReadStateChanged(ctx, conversationID)
 }

@@ -300,14 +300,11 @@ func (c *Conversation) doReadDrawing(ctx context.Context, msg *sdkws.MsgData) er
 				SessionType: conversation.ConversationType, ReadTime: msg.SendTime}}
 			c.msgListener().OnRecvC2CReadReceipt(utils.StructToJsonString(messageReceiptResp))
 
-			// Update ReadCursor and trigger OnAllReadSeqChanged for single chat
+			// Update ReadCursor and trigger callback for subscribed conversation
 			if maxReadSeq > 0 {
-				allReadSeqChanged, newAllReadSeq := c.updateReadCursorAndAllReadSeq(ctx, tips.ConversationID, tips.MarkAsReadUserID, maxReadSeq)
-				if allReadSeqChanged {
-					c.msgListener().OnAllReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
-						"conversationID": tips.ConversationID,
-						"allReadSeq":     newAllReadSeq,
-					}))
+				readStateChanged, _ := c.updateReadCursorAndReadState(ctx, tips.ConversationID, tips.MarkAsReadUserID, maxReadSeq)
+				if readStateChanged {
+					c.checkAndNotifyReadStateChanged(ctx, tips.ConversationID)
 				}
 			}
 
@@ -341,10 +338,10 @@ func isRecordNotFoundError(err error) bool {
 	return errMsg == "record not found" || errMsg == "ErrRecordNotFound"
 }
 
-// updateReadCursorAndAllReadSeq updates the read cursor and recalculates allReadSeq if needed.
-// Returns (allReadSeqChanged, newAllReadSeq).
-func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conversationID, userID string, maxReadSeq int64) (bool, int64) {
-	log.ZDebug(ctx, "updateReadCursorAndAllReadSeq called",
+// updateReadCursorAndReadState updates the read cursor and recalculates ReadState if needed.
+// Returns (readStateChanged, newAllReadSeq).
+func (c *Conversation) updateReadCursorAndReadState(ctx context.Context, conversationID, userID string, maxReadSeq int64) (bool, int64) {
+	log.ZDebug(ctx, "updateReadCursorAndReadState called",
 		"conversationID", conversationID, "userID", userID, "maxReadSeq", maxReadSeq)
 
 	// Get current state
@@ -382,7 +379,7 @@ func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conver
 	log.ZDebug(ctx, "Cursor upserted successfully", "newCursor", newCursor)
 
 	// Calculate new allReadSeq - always recalculate from cursors to ensure accuracy
-	var allReadSeqChanged bool
+	var readStateChanged bool
 	var newAllReadSeq int64
 
 	// Get current allReadSeq from all cursors, excluding self
@@ -399,11 +396,11 @@ func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conver
 		oldAllReadSeq = state.AllReadSeq
 	}
 
-	// Check if allReadSeq changed
+	// Check if ReadState changed
 	if allSeq != oldAllReadSeq {
 		newAllReadSeq = allSeq
-		allReadSeqChanged = true
-		log.ZDebug(ctx, "AllReadSeq changed", "oldAllReadSeq", oldAllReadSeq, "newAllReadSeq", newAllReadSeq)
+		readStateChanged = true
+		log.ZDebug(ctx, "ReadState changed", "oldAllReadSeq", oldAllReadSeq, "newAllReadSeq", newAllReadSeq)
 
 		// Update state
 		newState := &model_struct.LocalReadState{
@@ -414,10 +411,10 @@ func (c *Conversation) updateReadCursorAndAllReadSeq(ctx context.Context, conver
 			log.ZWarn(ctx, "UpsertReadState err", err, "conversationID", conversationID)
 		}
 	} else {
-		log.ZDebug(ctx, "AllReadSeq unchanged", "allSeq", allSeq, "oldAllReadSeq", oldAllReadSeq)
+		log.ZDebug(ctx, "ReadState unchanged", "allSeq", allSeq, "oldAllReadSeq", oldAllReadSeq)
 	}
 
-	return allReadSeqChanged, newAllReadSeq
+	return readStateChanged, newAllReadSeq
 }
 
 // doGroupReadDrawing handles GroupHasReadReceipt notifications (contentType 2201)
@@ -454,15 +451,12 @@ func (c *Conversation) doGroupReadDrawing(ctx context.Context, msg *sdkws.MsgDat
 
 	maxReadSeq := tips.HasReadSeq
 	if maxReadSeq > 0 {
-		// Update cursor and calculate allReadSeq change
-		allReadSeqChanged, newAllReadSeq := c.updateReadCursorAndAllReadSeq(ctx, tips.ConversationID, tips.UserID, maxReadSeq)
+		// Update cursor and calculate ReadState change
+		readStateChanged, _ := c.updateReadCursorAndReadState(ctx, tips.ConversationID, tips.UserID, maxReadSeq)
 
-		// If allReadSeq changed, notify frontend for UI update
-		if allReadSeqChanged {
-			c.msgListener().OnAllReadSeqChanged(utils.StructToJsonString(map[string]interface{}{
-				"conversationID": tips.ConversationID,
-				"allReadSeq":     newAllReadSeq,
-			}))
+		// If ReadState changed, notify frontend for subscribed conversation
+		if readStateChanged {
+			c.checkAndNotifyReadStateChanged(ctx, tips.ConversationID)
 		}
 	}
 
