@@ -149,11 +149,16 @@ export async function upsertReadCursor(cursorJSON: string): Promise<string> {
 }
 
 export async function getAllReadSeqFromCursors(
-  conversationID: string
+  conversationID: string,
+  excludeUserID: string
 ): Promise<string> {
   try {
     const db = await getInstance();
-    const execResult = databaseGetAllReadSeqFromCursors(db, conversationID);
+    const execResult = databaseGetAllReadSeqFromCursors(
+      db,
+      conversationID,
+      excludeUserID
+    );
 
     if (execResult.length === 0 || !execResult[0].values.length) {
       return formatResponse(0);

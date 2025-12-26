@@ -113,12 +113,13 @@ export function upsertReadCursor(
 
 export function getAllReadSeqFromCursors(
   db: Database,
-  conversationID: string
+  conversationID: string,
+  excludeUserID: string
 ): QueryExecResult[] {
   return db.exec(
     `
       select min(max_read_seq) as all_read_seq from local_read_cursor
-      where conversation_id = '${conversationID}';
+      where conversation_id = '${conversationID}' and user_id != '${excludeUserID}';
     `
   );
 }

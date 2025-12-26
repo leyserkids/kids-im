@@ -5,7 +5,7 @@ export declare function updateReadCursor(conversationID: string, userID: string,
 export declare function deleteReadCursor(conversationID: string, userID: string): Promise<string>;
 export declare function deleteReadCursorsByConversationID(conversationID: string): Promise<string>;
 export declare function upsertReadCursor(cursorJSON: string): Promise<string>;
-export declare function getAllReadSeqFromCursors(conversationID: string): Promise<string>;
+export declare function getAllReadSeqFromCursors(conversationID: string, excludeUserID: string): Promise<string>;
 export declare function getReadStateDB(conversationID: string): Promise<string>;
 export declare function upsertReadStateDB(stateJSON: string): Promise<string>;
 export declare function updateReadStateAllReadSeqDB(conversationID: string, allReadSeq: number): Promise<string>;

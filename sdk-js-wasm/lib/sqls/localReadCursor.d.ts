@@ -12,4 +12,4 @@ export declare function updateReadCursor(db: Database, conversationID: string, u
 export declare function deleteReadCursor(db: Database, conversationID: string, userID: string): QueryExecResult[];
 export declare function deleteReadCursorsByConversationID(db: Database, conversationID: string): QueryExecResult[];
 export declare function upsertReadCursor(db: Database, cursorJSON: string): QueryExecResult[];
-export declare function getAllReadSeqFromCursors(db: Database, conversationID: string): QueryExecResult[];
+export declare function getAllReadSeqFromCursors(db: Database, conversationID: string, excludeUserID: string): QueryExecResult[];
