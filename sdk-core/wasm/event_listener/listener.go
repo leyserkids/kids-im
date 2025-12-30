@@ -172,6 +172,10 @@ func (a AdvancedMsgCallback) OnRecvOnlineOnlyMessage(message string) {
 	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(message).SendMessage()
 }
 
+func (a AdvancedMsgCallback) OnMessageSeqUpdated(message string) {
+	a.CallbackWriter.SetEvent(utils.GetSelfFuncName()).SetData(message).SendMessage()
+}
+
 type BaseCallback struct {
 	CallbackWriter
 }

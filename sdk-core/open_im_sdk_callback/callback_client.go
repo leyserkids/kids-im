@@ -75,6 +75,7 @@ type OnAdvancedMsgListener interface {
 	OnRecvOfflineNewMessage(message string)
 	OnMsgDeleted(message string)
 	OnRecvOnlineOnlyMessage(message string)
+	OnMessageSeqUpdated(message string) // Notifies when a sent message's seq is updated by server
 }
 
 type OnBatchMsgListener interface {

@@ -237,6 +237,9 @@ func (e *emptyAdvancedMsgListener) OnMsgDeleted(message string) {
 	log.ZWarn(e.ctx, "AdvancedMsgListener is not implemented", nil, "message", message)
 }
 
+func (e *emptyAdvancedMsgListener) OnMessageSeqUpdated(message string) {
+}
+
 type emptyBatchMsgListener struct{}
 
 func newEmptyBatchMsgListener() *emptyBatchMsgListener {

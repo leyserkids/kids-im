@@ -659,6 +659,11 @@ func (c *Conversation) batchUpdateMessageList(ctx context.Context, updateMsg map
 			if err != nil {
 				return errs.WrapMsg(err, "BatchUpdateMessageList failed")
 			}
+			// Notify message seq updated for sent messages
+			if v.SendID == c.loginUserID && v.Seq > 0 {
+				msgStruct := LocalChatLogToMsgStruct(v)
+				c.msgListener().OnMessageSeqUpdated(utils.StructToJsonString(msgStruct))
+			}
 			if latestMsg.ClientMsgID == v.ClientMsgID {
 				latestMsg.ServerMsgID = v.ServerMsgID
 				latestMsg.Seq = v.Seq
