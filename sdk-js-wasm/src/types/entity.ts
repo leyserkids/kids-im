@@ -253,7 +253,7 @@ export type CardElem = {
 };
 export type AtTextElem = {
   text: string;
-  atUserList: string[];
+  atUserList?: string[];
   atUsersInfo?: AtUsersInfoItem[];
   quoteMessage?: MessageItem;
   isAtSelf?: boolean;
