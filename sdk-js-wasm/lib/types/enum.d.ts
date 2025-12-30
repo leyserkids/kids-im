@@ -69,6 +69,7 @@ export declare enum MessageType {
     TypingMessage = 113,
     QuoteMessage = 114,
     FaceMessage = 115,
+    AdvancedTextMessage = 117,
     FriendAdded = 1201,
     OANotification = 1400,
     GroupCreated = 1501,

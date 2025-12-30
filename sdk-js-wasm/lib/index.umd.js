@@ -412,6 +412,7 @@
       CbEvents["OnNewRecvMessageRevoked"] = "OnNewRecvMessageRevoked";
       CbEvents["OnRecvC2CReadReceipt"] = "OnRecvC2CReadReceipt";
       CbEvents["OnConversationReadStateChanged"] = "OnConversationReadStateChanged";
+      CbEvents["OnMessageSeqUpdated"] = "OnMessageSeqUpdated";
       CbEvents["OnConversationChanged"] = "OnConversationChanged";
       CbEvents["OnNewConversation"] = "OnNewConversation";
       CbEvents["OnConversationUserInputStatusChanged"] = "OnConversationUserInputStatusChanged";
@@ -1109,6 +1110,7 @@
       MessageType[MessageType["TypingMessage"] = 113] = "TypingMessage";
       MessageType[MessageType["QuoteMessage"] = 114] = "QuoteMessage";
       MessageType[MessageType["FaceMessage"] = 115] = "FaceMessage";
+      MessageType[MessageType["AdvancedTextMessage"] = 117] = "AdvancedTextMessage";
       MessageType[MessageType["FriendAdded"] = 1201] = "FriendAdded";
       MessageType[MessageType["OANotification"] = 1400] = "OANotification";
       MessageType[MessageType["GroupCreated"] = 1501] = "GroupCreated";

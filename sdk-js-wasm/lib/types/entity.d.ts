@@ -236,7 +236,7 @@ export declare type CardElem = {
 };
 export declare type AtTextElem = {
     text: string;
-    atUserList: string[];
+    atUserList?: string[];
     atUsersInfo?: AtUsersInfoItem[];
     quoteMessage?: MessageItem;
     isAtSelf?: boolean;
