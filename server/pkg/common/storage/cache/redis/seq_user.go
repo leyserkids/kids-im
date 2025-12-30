@@ -182,52 +182,8 @@ func (r *readSeqModel) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.FormatInt(r.Seq, 10)), nil
 }
 
-// GetConversationUserReadSeqs gets read seqs for multiple users in a conversation
-func (s *seqUserCacheRedis) GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error) {
-	if len(userIDs) == 0 {
-		return make(map[string]int64), nil
-	}
-	res, err := batchGetCache2(ctx, s.rocks, s.readExpireTime, userIDs, func(userID string) string {
-		return s.getSeqUserReadSeqKey(conversationID, userID)
-	}, func(v *userReadSeqModel) string {
-		return v.UserID
-	}, func(ctx context.Context, userIDs []string) ([]*userReadSeqModel, error) {
-		seqs, err := s.mgo.GetConversationUserReadSeqs(ctx, conversationID, userIDs)
-		if err != nil {
-			return nil, err
-		}
-		res := make([]*userReadSeqModel, 0, len(seqs))
-		for userID, seq := range seqs {
-			res = append(res, &userReadSeqModel{UserID: userID, Seq: seq})
-		}
-		return res, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	data := make(map[string]int64)
-	for _, v := range res {
-		data[v.UserID] = v.Seq
-	}
-	return data, nil
+// GetConversationsUserReadSeqs gets read seqs for specified users in multiple conversations
+func (s *seqUserCacheRedis) GetConversationsUserReadSeqs(ctx context.Context, conversationUserIDs map[string][]string) (map[string]map[string]int64, error) {
+	return s.mgo.GetConversationsUserReadSeqs(ctx, conversationUserIDs)
 }
 
-var _ BatchCacheCallback[string] = (*userReadSeqModel)(nil)
-
-type userReadSeqModel struct {
-	UserID string
-	Seq    int64
-}
-
-func (r *userReadSeqModel) BatchCache(userID string) {
-	r.UserID = userID
-}
-
-func (r *userReadSeqModel) UnmarshalJSON(bytes []byte) (err error) {
-	r.Seq, err = strconv.ParseInt(string(bytes), 10, 64)
-	return
-}
-
-func (r *userReadSeqModel) MarshalJSON() ([]byte, error) {
-	return []byte(strconv.FormatInt(r.Seq, 10)), nil
-}

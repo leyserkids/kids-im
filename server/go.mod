@@ -220,4 +220,4 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
-replace github.com/openimsdk/protocol => github.com/leyserkids/openim-protocol v0.0.72-kids.5
+replace github.com/openimsdk/protocol => github.com/leyserkids/openim-protocol v0.0.72-kids.6

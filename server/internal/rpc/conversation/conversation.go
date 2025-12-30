@@ -811,16 +811,47 @@ func (c *conversationServer) setConversationMinSeqAndLatestMsgDestructTime(ctx c
 }
 
 func (c *conversationServer) GetConversationReadCursors(ctx context.Context, req *pbconversation.GetConversationReadCursorsReq) (*pbconversation.GetConversationReadCursorsResp, error) {
-	// 1. 通过数据库查询获取会话信息
+	if len(req.ConversationIDs) == 0 {
+		return &pbconversation.GetConversationReadCursorsResp{}, nil
+	}
+
+	// 获取会话信息，用于判断会话类型
 	conversations, err := c.conversationDatabase.GetConversationsByConversationID(ctx, req.ConversationIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. 构建 conversationID -> Conversation 映射
-	conversationMap := make(map[string]*dbModel.Conversation)
+	// 构建每个会话需要查询的用户列表
+	conversationUserIDs := make(map[string][]string)
 	for _, conv := range conversations {
-		conversationMap[conv.ConversationID] = conv
+		var userIDs []string
+		switch conv.ConversationType {
+		case constant.SingleChatType:
+			// 单聊：查询对方用户（OwnerUserID 是对方）
+			if conv.OwnerUserID != req.UserID {
+				userIDs = []string{conv.OwnerUserID}
+			}
+		case constant.ReadGroupChatType, constant.WriteGroupChatType:
+			// 群聊：查询当前群成员（排除请求者自己）
+			memberUserIDs, err := c.groupClient.GetGroupMemberUserIDs(ctx, conv.GroupID)
+			if err != nil {
+				return nil, err
+			}
+			for _, uid := range memberUserIDs {
+				if uid != req.UserID {
+					userIDs = append(userIDs, uid)
+				}
+			}
+		}
+		if len(userIDs) > 0 {
+			conversationUserIDs[conv.ConversationID] = userIDs
+		}
+	}
+
+	// 批量获取指定用户的已读位置
+	allUserReadSeqs, err := c.msgClient.GetConversationsUserReadSeqs(ctx, conversationUserIDs)
+	if err != nil {
+		return nil, err
 	}
 
 	resp := &pbconversation.GetConversationReadCursorsResp{
@@ -828,61 +859,7 @@ func (c *conversationServer) GetConversationReadCursors(ctx context.Context, req
 	}
 
 	for _, conversationID := range req.ConversationIDs {
-		conversation, exists := conversationMap[conversationID]
-		if !exists {
-			continue
-		}
-
-		var userIDs []string
-
-		// 3. 根据会话类型获取用户列表
-		switch conversation.ConversationType {
-		case constant.ReadGroupChatType:
-			if conversation.GroupID == "" {
-				log.ZWarn(ctx, "groupID is empty", nil, "conversationID", conversationID)
-				resp.ConversationReadCursors = append(resp.ConversationReadCursors,
-					&pbconversation.ConversationReadCursors{
-						ConversationID: conversationID,
-						Cursors:        []*pbconversation.ReadCursor{},
-					})
-				continue
-			}
-			memberIDs, err := c.groupClient.GetGroupMemberUserIDs(ctx, conversation.GroupID)
-			if err != nil {
-				log.ZWarn(ctx, "GetGroupMemberIDs failed", err,
-					"conversationID", conversationID, "groupID", conversation.GroupID)
-				resp.ConversationReadCursors = append(resp.ConversationReadCursors,
-					&pbconversation.ConversationReadCursors{
-						ConversationID: conversationID,
-						Cursors:        []*pbconversation.ReadCursor{},
-					})
-				continue
-			}
-			userIDs = memberIDs
-
-		case constant.SingleChatType:
-			// 单聊：从 conversationID 解析出两个用户
-			userIDs = msgprocessor.GetSingleChatUserIDsFromConversationID(conversationID)
-			if len(userIDs) == 0 {
-				continue
-			}
-
-		default:
-			continue
-		}
-
-		// 4. 批量获取用户的 ReadSeq
-		userReadSeqs, err := c.msgClient.GetConversationUserReadSeqs(ctx, conversationID, userIDs)
-		if err != nil {
-			log.ZWarn(ctx, "GetConversationUserReadSeqs failed", err, "conversationID", conversationID)
-			resp.ConversationReadCursors = append(resp.ConversationReadCursors,
-				&pbconversation.ConversationReadCursors{
-					ConversationID: conversationID,
-					Cursors:        []*pbconversation.ReadCursor{},
-				})
-			continue
-		}
-
+		userReadSeqs := allUserReadSeqs[conversationID]
 		cursors := make([]*pbconversation.ReadCursor, 0, len(userReadSeqs))
 		for userID, readSeq := range userReadSeqs {
 			cursors = append(cursors, &pbconversation.ReadCursor{
@@ -890,7 +867,6 @@ func (c *conversationServer) GetConversationReadCursors(ctx context.Context, req
 				MaxReadSeq: readSeq,
 			})
 		}
-
 		resp.ConversationReadCursors = append(resp.ConversationReadCursors,
 			&pbconversation.ConversationReadCursors{
 				ConversationID: conversationID,

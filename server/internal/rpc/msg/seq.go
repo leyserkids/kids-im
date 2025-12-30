@@ -103,10 +103,24 @@ func (m *msgServer) SetUserConversationMinSeq(ctx context.Context, req *pbmsg.Se
 	return &pbmsg.SetUserConversationMinSeqResp{}, nil
 }
 
-func (m *msgServer) GetConversationUserReadSeqs(ctx context.Context, req *pbmsg.GetConversationUserReadSeqsReq) (*pbmsg.GetConversationUserReadSeqsResp, error) {
-	userReadSeqs, err := m.MsgDatabase.GetConversationUserReadSeqs(ctx, req.ConversationID, req.UserIDs)
+func (m *msgServer) GetConversationsUserReadSeqs(ctx context.Context, req *pbmsg.GetConversationsUserReadSeqsReq) (*pbmsg.GetConversationsUserReadSeqsResp, error) {
+	// Convert protobuf map to Go map
+	conversationUserIDs := make(map[string][]string)
+	for conversationID, userIDs := range req.ConversationUserIDs {
+		conversationUserIDs[conversationID] = userIDs.UserIDs
+	}
+	userReadSeqs, err := m.MsgDatabase.GetConversationsUserReadSeqs(ctx, conversationUserIDs)
 	if err != nil {
 		return nil, err
 	}
-	return &pbmsg.GetConversationUserReadSeqsResp{UserReadSeqs: userReadSeqs}, nil
+	resp := &pbmsg.GetConversationsUserReadSeqsResp{
+		ConversationUserReadSeqs: make(map[string]*pbmsg.ConversationUserReadSeqs),
+	}
+	for conversationID, seqs := range userReadSeqs {
+		resp.ConversationUserReadSeqs[conversationID] = &pbmsg.ConversationUserReadSeqs{
+			UserReadSeqs: seqs,
+		}
+	}
+	return resp, nil
 }
+

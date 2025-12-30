@@ -13,6 +13,6 @@ type SeqUser interface {
 	SetUserMinSeqs(ctx context.Context, userID string, seqs map[string]int64) error
 	SetUserReadSeqs(ctx context.Context, userID string, seqs map[string]int64) error
 	GetUserReadSeqs(ctx context.Context, userID string, conversationIDs []string) (map[string]int64, error)
-	// GetConversationUserReadSeqs gets read seqs for multiple users in a conversation
-	GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error)
+	// GetConversationsUserReadSeqs gets read seqs for specified users in multiple conversations
+	GetConversationsUserReadSeqs(ctx context.Context, conversationUserIDs map[string][]string) (map[string]map[string]int64, error)
 }

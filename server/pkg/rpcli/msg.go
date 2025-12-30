@@ -89,10 +89,24 @@ func (x *MsgClient) SetUserConversationsMinSeq(ctx context.Context, conversation
 	return ignoreResp(x.MsgClient.SetUserConversationsMinSeq(ctx, req))
 }
 
-func (x *MsgClient) GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error) {
-	if len(userIDs) == 0 {
-		return make(map[string]int64), nil
+func (x *MsgClient) GetConversationsUserReadSeqs(ctx context.Context, conversationUserIDs map[string][]string) (map[string]map[string]int64, error) {
+	if len(conversationUserIDs) == 0 {
+		return make(map[string]map[string]int64), nil
 	}
-	req := &msg.GetConversationUserReadSeqsReq{ConversationID: conversationID, UserIDs: userIDs}
-	return extractField(ctx, x.MsgClient.GetConversationUserReadSeqs, req, (*msg.GetConversationUserReadSeqsResp).GetUserReadSeqs)
+	// Convert Go map to protobuf map
+	pbConversationUserIDs := make(map[string]*msg.UserIDs)
+	for conversationID, userIDs := range conversationUserIDs {
+		pbConversationUserIDs[conversationID] = &msg.UserIDs{UserIDs: userIDs}
+	}
+	req := &msg.GetConversationsUserReadSeqsReq{ConversationUserIDs: pbConversationUserIDs}
+	resp, err := x.MsgClient.GetConversationsUserReadSeqs(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]map[string]int64)
+	for conversationID, seqs := range resp.ConversationUserReadSeqs {
+		result[conversationID] = seqs.UserReadSeqs
+	}
+	return result, nil
 }
+

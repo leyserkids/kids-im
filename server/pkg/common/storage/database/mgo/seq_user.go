@@ -125,29 +125,41 @@ func (s *seqUserMongo) SetUserReadSeq(ctx context.Context, conversationID string
 	return s.setSeq(ctx, conversationID, userID, seq, "read_seq")
 }
 
-func (s *seqUserMongo) notFoundUserSet0(seq map[string]int64, userIDs []string) {
-	for _, userID := range userIDs {
-		if _, ok := seq[userID]; !ok {
-			seq[userID] = 0
+// GetConversationsUserReadSeqs gets read seqs for specified users in multiple conversations
+func (s *seqUserMongo) GetConversationsUserReadSeqs(ctx context.Context, conversationUserIDs map[string][]string) (map[string]map[string]int64, error) {
+	if len(conversationUserIDs) == 0 {
+		return map[string]map[string]int64{}, nil
+	}
+	// 收集所有 conversationIDs，并构建用户集合用于快速查找
+	conversationIDs := make([]string, 0, len(conversationUserIDs))
+	userIDSets := make(map[string]map[string]struct{})
+	for conversationID, userIDs := range conversationUserIDs {
+		conversationIDs = append(conversationIDs, conversationID)
+		set := make(map[string]struct{})
+		for _, uid := range userIDs {
+			set[uid] = struct{}{}
 		}
+		userIDSets[conversationID] = set
 	}
-}
-
-// GetConversationUserReadSeqs gets read seqs for multiple users in a conversation
-func (s *seqUserMongo) GetConversationUserReadSeqs(ctx context.Context, conversationID string, userIDs []string) (map[string]int64, error) {
-	if len(userIDs) == 0 {
-		return map[string]int64{}, nil
-	}
-	filter := bson.M{"conversation_id": conversationID, "user_id": bson.M{"$in": userIDs}}
-	opt := options.Find().SetProjection(bson.M{"_id": 0, "user_id": 1, "read_seq": 1})
+	// 简单查询：获取这些会话的所有用户数据
+	filter := bson.M{"conversation_id": bson.M{"$in": conversationIDs}}
+	opt := options.Find().SetProjection(bson.M{"_id": 0, "conversation_id": 1, "user_id": 1, "read_seq": 1})
 	seqs, err := mongoutil.Find[*model.SeqUser](ctx, s.coll, filter, opt)
 	if err != nil {
 		return nil, err
 	}
-	res := make(map[string]int64)
+	// 在应用层过滤：只保留指定用户的数据
+	res := make(map[string]map[string]int64)
 	for _, seq := range seqs {
-		res[seq.UserID] = seq.ReadSeq
+		if userSet, ok := userIDSets[seq.ConversationID]; ok {
+			if _, exists := userSet[seq.UserID]; exists {
+				if res[seq.ConversationID] == nil {
+					res[seq.ConversationID] = make(map[string]int64)
+				}
+				res[seq.ConversationID][seq.UserID] = seq.ReadSeq
+			}
+		}
 	}
-	s.notFoundUserSet0(res, userIDs)
 	return res, nil
 }
+
