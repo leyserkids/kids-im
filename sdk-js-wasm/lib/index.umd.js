@@ -411,7 +411,7 @@
       CbEvents["OnRecvMessageRevoked"] = "OnRecvMessageRevoked";
       CbEvents["OnNewRecvMessageRevoked"] = "OnNewRecvMessageRevoked";
       CbEvents["OnRecvC2CReadReceipt"] = "OnRecvC2CReadReceipt";
-      CbEvents["OnAllReadSeqChanged"] = "OnAllReadSeqChanged";
+      CbEvents["OnConversationReadStateChanged"] = "OnConversationReadStateChanged";
       CbEvents["OnConversationChanged"] = "OnConversationChanged";
       CbEvents["OnNewConversation"] = "OnNewConversation";
       CbEvents["OnConversationUserInputStatusChanged"] = "OnConversationUserInputStatusChanged";
