@@ -68,7 +68,7 @@ const (
 	Msg_SetUserConversationMinSeq_FullMethodName        = "/openim.msg.msg/SetUserConversationMinSeq"
 	Msg_GetLastMessageSeqByTime_FullMethodName          = "/openim.msg.msg/GetLastMessageSeqByTime"
 	Msg_GetLastMessage_FullMethodName                   = "/openim.msg.msg/GetLastMessage"
-	Msg_GetConversationUserReadSeqs_FullMethodName      = "/openim.msg.msg/GetConversationUserReadSeqs"
+	Msg_GetConversationsUserReadSeqs_FullMethodName     = "/openim.msg.msg/GetConversationsUserReadSeqs"
 )
 
 // MsgClient is the client API for Msg service.
@@ -123,8 +123,8 @@ type MsgClient interface {
 	SetUserConversationMinSeq(ctx context.Context, in *SetUserConversationMinSeqReq, opts ...grpc.CallOption) (*SetUserConversationMinSeqResp, error)
 	GetLastMessageSeqByTime(ctx context.Context, in *GetLastMessageSeqByTimeReq, opts ...grpc.CallOption) (*GetLastMessageSeqByTimeResp, error)
 	GetLastMessage(ctx context.Context, in *GetLastMessageReq, opts ...grpc.CallOption) (*GetLastMessageResp, error)
-	// Get read seqs for multiple users in a conversation
-	GetConversationUserReadSeqs(ctx context.Context, in *GetConversationUserReadSeqsReq, opts ...grpc.CallOption) (*GetConversationUserReadSeqsResp, error)
+	// Get read seqs for all users in multiple conversations
+	GetConversationsUserReadSeqs(ctx context.Context, in *GetConversationsUserReadSeqsReq, opts ...grpc.CallOption) (*GetConversationsUserReadSeqsResp, error)
 }
 
 type msgClient struct {
@@ -475,10 +475,10 @@ func (c *msgClient) GetLastMessage(ctx context.Context, in *GetLastMessageReq, o
 	return out, nil
 }
 
-func (c *msgClient) GetConversationUserReadSeqs(ctx context.Context, in *GetConversationUserReadSeqsReq, opts ...grpc.CallOption) (*GetConversationUserReadSeqsResp, error) {
+func (c *msgClient) GetConversationsUserReadSeqs(ctx context.Context, in *GetConversationsUserReadSeqsReq, opts ...grpc.CallOption) (*GetConversationsUserReadSeqsResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetConversationUserReadSeqsResp)
-	err := c.cc.Invoke(ctx, Msg_GetConversationUserReadSeqs_FullMethodName, in, out, cOpts...)
+	out := new(GetConversationsUserReadSeqsResp)
+	err := c.cc.Invoke(ctx, Msg_GetConversationsUserReadSeqs_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -537,8 +537,8 @@ type MsgServer interface {
 	SetUserConversationMinSeq(context.Context, *SetUserConversationMinSeqReq) (*SetUserConversationMinSeqResp, error)
 	GetLastMessageSeqByTime(context.Context, *GetLastMessageSeqByTimeReq) (*GetLastMessageSeqByTimeResp, error)
 	GetLastMessage(context.Context, *GetLastMessageReq) (*GetLastMessageResp, error)
-	// Get read seqs for multiple users in a conversation
-	GetConversationUserReadSeqs(context.Context, *GetConversationUserReadSeqsReq) (*GetConversationUserReadSeqsResp, error)
+	// Get read seqs for all users in multiple conversations
+	GetConversationsUserReadSeqs(context.Context, *GetConversationsUserReadSeqsReq) (*GetConversationsUserReadSeqsResp, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -651,8 +651,8 @@ func (UnimplementedMsgServer) GetLastMessageSeqByTime(context.Context, *GetLastM
 func (UnimplementedMsgServer) GetLastMessage(context.Context, *GetLastMessageReq) (*GetLastMessageResp, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetLastMessage not implemented")
 }
-func (UnimplementedMsgServer) GetConversationUserReadSeqs(context.Context, *GetConversationUserReadSeqsReq) (*GetConversationUserReadSeqsResp, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetConversationUserReadSeqs not implemented")
+func (UnimplementedMsgServer) GetConversationsUserReadSeqs(context.Context, *GetConversationsUserReadSeqsReq) (*GetConversationsUserReadSeqsResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConversationsUserReadSeqs not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -1287,20 +1287,20 @@ func _Msg_GetLastMessage_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_GetConversationUserReadSeqs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetConversationUserReadSeqsReq)
+func _Msg_GetConversationsUserReadSeqs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConversationsUserReadSeqsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).GetConversationUserReadSeqs(ctx, in)
+		return srv.(MsgServer).GetConversationsUserReadSeqs(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_GetConversationUserReadSeqs_FullMethodName,
+		FullMethod: Msg_GetConversationsUserReadSeqs_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).GetConversationUserReadSeqs(ctx, req.(*GetConversationUserReadSeqsReq))
+		return srv.(MsgServer).GetConversationsUserReadSeqs(ctx, req.(*GetConversationsUserReadSeqsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1449,8 +1449,8 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Msg_GetLastMessage_Handler,
 		},
 		{
-			MethodName: "GetConversationUserReadSeqs",
-			Handler:    _Msg_GetConversationUserReadSeqs_Handler,
+			MethodName: "GetConversationsUserReadSeqs",
+			Handler:    _Msg_GetConversationsUserReadSeqs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

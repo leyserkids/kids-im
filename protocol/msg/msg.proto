@@ -409,13 +409,20 @@ message GetLastMessageResp {
   map<string,sdkws.MsgData> msgs = 1;
 }
 
-// GetConversationUserReadSeqs - get read seqs for multiple users in a conversation
-message GetConversationUserReadSeqsReq {
-  string conversationID = 1;
-  repeated string userIDs = 2;
+// GetConversationsUserReadSeqs - get read seqs for specified users in multiple conversations
+message GetConversationsUserReadSeqsReq {
+  map<string, UserIDs> conversationUserIDs = 1;  // conversationID -> userIDs to query
 }
 
-message GetConversationUserReadSeqsResp {
+message UserIDs {
+  repeated string userIDs = 1;
+}
+
+message GetConversationsUserReadSeqsResp {
+  map<string, ConversationUserReadSeqs> conversationUserReadSeqs = 1;  // conversationID -> userReadSeqs
+}
+
+message ConversationUserReadSeqs {
   map<string, int64> userReadSeqs = 1;  // userID -> readSeq
 }
 
@@ -475,6 +482,6 @@ service msg {
   rpc SetUserConversationMinSeq(SetUserConversationMinSeqReq) returns (SetUserConversationMinSeqResp);
   rpc GetLastMessageSeqByTime(GetLastMessageSeqByTimeReq) returns (GetLastMessageSeqByTimeResp);
   rpc GetLastMessage(GetLastMessageReq) returns (GetLastMessageResp);
-  // Get read seqs for multiple users in a conversation
-  rpc GetConversationUserReadSeqs(GetConversationUserReadSeqsReq) returns (GetConversationUserReadSeqsResp);
+  // Get read seqs for all users in multiple conversations
+  rpc GetConversationsUserReadSeqs(GetConversationsUserReadSeqsReq) returns (GetConversationsUserReadSeqsResp);
 }

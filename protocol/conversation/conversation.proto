@@ -319,6 +319,7 @@ message ConversationReadCursors {
 // GetConversationReadCursorsReq request to get read cursors for conversations
 message GetConversationReadCursorsReq {
   repeated string conversationIDs = 1;
+  string userID = 2;  // requesting user ID, used to exclude self and filter group members
 }
 
 // GetConversationReadCursorsResp response containing read cursors for conversations
