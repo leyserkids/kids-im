@@ -74,6 +74,6 @@ func (c *Conversation) getIncrementalConversationFromServer(ctx context.Context,
 
 // getConversationReadCursorsFromServer gets group read cursors for the given conversations
 func (c *Conversation) getConversationReadCursorsFromServer(ctx context.Context, conversationIDs []string) (*pbConversation.GetConversationReadCursorsResp, error) {
-	req := &pbConversation.GetConversationReadCursorsReq{ConversationIDs: conversationIDs}
+	req := &pbConversation.GetConversationReadCursorsReq{ConversationIDs: conversationIDs, UserID: c.loginUserID}
 	return api.GetConversationReadCursors.Invoke(ctx, req)
 }
