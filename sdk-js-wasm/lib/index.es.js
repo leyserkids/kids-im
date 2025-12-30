@@ -2019,6 +2019,12 @@ class SDK extends Emitter {
         this.unsubscribeUsersStatus = (data, operationID = v4()) => {
             return this._invoker('unsubscribeUsersStatus ', window.unsubscribeUsersStatus, [operationID, JSON.stringify(data)]);
         };
+        this.subscribeConversationReadState = (conversationID) => {
+            return this._invoker('subscribeConversationReadState ', window.subscribeConversationReadState, [v4(), conversationID]);
+        };
+        this.unsubscribeConversationReadState = (conversationID) => {
+            return this._invoker('unsubscribeConversationReadState ', window.unsubscribeConversationReadState, [v4(), conversationID]);
+        };
         this.getUserStatus = (operationID = v4()) => {
             return this._invoker('getUserStatus ', window.getUserStatus, [operationID]);
         };

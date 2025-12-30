@@ -1604,6 +1604,20 @@ class SDK extends Emitter {
       [operationID, JSON.stringify(data)]
     );
   };
+  subscribeConversationReadState = (conversationID: string) => {
+    return this._invoker<number>(
+      'subscribeConversationReadState ',
+      window.subscribeConversationReadState,
+      [uuidv4(), conversationID]
+    );
+  };
+  unsubscribeConversationReadState = (conversationID: string) => {
+    return this._invoker<void>(
+      'unsubscribeConversationReadState ',
+      window.unsubscribeConversationReadState,
+      [uuidv4(), conversationID]
+    );
+  };
   getUserStatus = (operationID = uuidv4()) => {
     return this._invoker<UserOnlineState[]>(
       'getUserStatus ',

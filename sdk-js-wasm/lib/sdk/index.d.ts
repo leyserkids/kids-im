@@ -207,6 +207,8 @@ declare class SDK extends Emitter {
     }>>;
     subscribeUsersStatus: (data: string[], operationID?: string) => Promise<WsResponse<UserOnlineState[]>>;
     unsubscribeUsersStatus: (data: string[], operationID?: string) => Promise<WsResponse<UserOnlineState[]>>;
+    subscribeConversationReadState: (conversationID: string) => Promise<WsResponse<number>>;
+    unsubscribeConversationReadState: (conversationID: string) => Promise<WsResponse<void>>;
     getUserStatus: (operationID?: string) => Promise<WsResponse<UserOnlineState[]>>;
     getSubscribeUsersStatus: (operationID?: string) => Promise<WsResponse<UserOnlineState[]>>;
     signalingInvite: (data: SignalingInviteParams, operationID?: string) => Promise<WsResponse<RtcInviteResults>>;
