@@ -136,6 +136,8 @@ func (c *Conversation) doNotificationManager(c2v common.Cmd2Value) {
 				c.user.DoNotification(ctx, msg)
 			} else if msg.ContentType > constant.GroupNotificationBegin && msg.ContentType < constant.GroupNotificationEnd {
 				c.group.DoNotification(ctx, msg)
+				// Handle ReadCursor updates for group member changes
+				c.handleGroupMemberChangeForReadCursor(ctx, msg)
 			} else {
 				c.DoNotification(ctx, msg)
 			}
@@ -451,6 +453,9 @@ func (c *Conversation) syncData(c2v common.Cmd2Value) {
 	}
 
 	runSyncFunctions(ctx, asyncFuncs, asyncNoWait)
+
+	// Sync all ReadCursors asynchronously
+	go c.syncAllReadCursors(ctx)
 }
 
 func runSyncFunctions(ctx context.Context, funcs []func(c context.Context) error, mode int) {

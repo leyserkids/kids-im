@@ -23,6 +23,7 @@ import (
 	"github.com/openimsdk/openim-sdk-core/v3/pkg/db/model_struct"
 	"github.com/openimsdk/openim-sdk-core/v3/pkg/utils"
 	"github.com/openimsdk/protocol/msg"
+	"github.com/openimsdk/protocol/sdkws"
 	"github.com/openimsdk/tools/utils/datautil"
 
 	"github.com/openimsdk/tools/log"
@@ -291,4 +292,146 @@ func (c *Conversation) checkAndNotifyReadStateChanged(ctx context.Context, conve
 		return // Not subscribed, no callback
 	}
 	c.notifyConversationReadStateChanged(ctx, conversationID)
+}
+
+// handleGroupMemberChangeForReadCursor handles ReadCursor updates when group members change
+func (c *Conversation) handleGroupMemberChangeForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+	go func() {
+		switch msg.ContentType {
+		case constant.MemberQuitNotification: // 1504
+			c.handleMemberQuitForReadCursor(ctx, msg)
+		case constant.MemberKickedNotification: // 1508
+			c.handleMemberKickedForReadCursor(ctx, msg)
+		case constant.MemberInvitedNotification: // 1509
+			c.handleMemberInvitedForReadCursor(ctx, msg)
+		case constant.MemberEnterNotification: // 1510
+			c.handleMemberEnterForReadCursor(ctx, msg)
+		case constant.GroupDismissedNotification: // 1511
+			c.handleGroupDismissedForReadCursor(ctx, msg)
+		}
+	}()
+}
+
+// handleMemberQuitForReadCursor - member quit: delete cursor, recalculate allReadSeq
+func (c *Conversation) handleMemberQuitForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+	var detail sdkws.MemberQuitTips
+	if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+		log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+		return
+	}
+
+	// Skip if it's the current user quitting
+	if detail.QuitUser.UserID == c.loginUserID {
+		return
+	}
+
+	conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+	c.handleMemberLeftForReadCursor(ctx, conversationID, []string{detail.QuitUser.UserID})
+}
+
+// handleMemberKickedForReadCursor - members kicked: delete cursors, recalculate allReadSeq
+func (c *Conversation) handleMemberKickedForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+	var detail sdkws.MemberKickedTips
+	if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+		log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+		return
+	}
+
+	var userIDs []string
+	for _, member := range detail.KickedUserList {
+		// Skip current user
+		if member.UserID != c.loginUserID {
+			userIDs = append(userIDs, member.UserID)
+		}
+	}
+
+	if len(userIDs) == 0 {
+		return
+	}
+
+	conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+	c.handleMemberLeftForReadCursor(ctx, conversationID, userIDs)
+}
+
+// handleMemberLeftForReadCursor - member left: delete cursor, recalculate allReadSeq (may increase)
+func (c *Conversation) handleMemberLeftForReadCursor(ctx context.Context, conversationID string, userIDs []string) {
+	for _, userID := range userIDs {
+		if err := c.db.DeleteReadCursor(ctx, conversationID, userID); err != nil {
+			log.ZWarn(ctx, "DeleteReadCursor failed", err, "conversationID", conversationID, "userID", userID)
+		}
+	}
+
+	// Recalculate allReadSeq and notify
+	c.updateReadStateAfterSync(ctx, conversationID)
+}
+
+// handleMemberInvitedForReadCursor - members invited: create cursors (maxReadSeq=0)
+func (c *Conversation) handleMemberInvitedForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+	var detail sdkws.MemberInvitedTips
+	if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+		log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+		return
+	}
+
+	var userIDs []string
+	for _, member := range detail.InvitedUserList {
+		// Skip current user
+		if member.UserID != c.loginUserID {
+			userIDs = append(userIDs, member.UserID)
+		}
+	}
+
+	if len(userIDs) == 0 {
+		return
+	}
+
+	conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+	c.handleMemberEnterForReadCursorInternal(ctx, conversationID, userIDs)
+}
+
+// handleMemberEnterForReadCursor - member entered: create cursor (maxReadSeq=0)
+func (c *Conversation) handleMemberEnterForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+	var detail sdkws.MemberEnterTips
+	if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+		log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+		return
+	}
+
+	// Skip current user
+	if detail.EntrantUser.UserID == c.loginUserID {
+		return
+	}
+
+	conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+	c.handleMemberEnterForReadCursorInternal(ctx, conversationID, []string{detail.EntrantUser.UserID})
+}
+
+// handleMemberEnterForReadCursorInternal - new members joined: sync cursors from server
+// Don't create local cursors with maxReadSeq=0, instead sync from server to get actual read positions
+func (c *Conversation) handleMemberEnterForReadCursorInternal(ctx context.Context, conversationID string, userIDs []string) {
+	// Sync from server to get actual cursor values
+	// This handles both new members (server returns their actual position) and
+	// rejoining members (server may have their previous read position)
+	if err := c.SyncReadCursors(ctx, []string{conversationID}); err != nil {
+		log.ZWarn(ctx, "SyncReadCursors failed after member enter", err, "conversationID", conversationID, "userIDs", userIDs)
+	}
+}
+
+// handleGroupDismissedForReadCursor - group dismissed: clean up all cursor and state
+func (c *Conversation) handleGroupDismissedForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+	var detail sdkws.GroupDismissedTips
+	if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+		log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+		return
+	}
+
+	conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+
+	if err := c.db.DeleteReadCursorsByConversationID(ctx, conversationID); err != nil {
+		log.ZWarn(ctx, "DeleteReadCursorsByConversationID failed", err, "conversationID", conversationID)
+	}
+
+	if err := c.db.DeleteReadState(ctx, conversationID); err != nil {
+		log.ZWarn(ctx, "DeleteReadState failed", err, "conversationID", conversationID)
+	}
 }
