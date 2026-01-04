@@ -184,6 +184,10 @@ func (o *onAdvancedMsgListener) OnRecvMessageExtensionsAdded(msgID string, react
 	log.ZInfo(o.ctx, "OnRecvMessageExtensionsAdded", "msgID", msgID, "reactionExtensionList", reactionExtensionList)
 }
 
+func (o *onAdvancedMsgListener) OnMessageSeqUpdated(seqUpdateInfo string) {
+	log.ZInfo(o.ctx, "OnMessageSeqUpdated", "seqUpdateInfo", seqUpdateInfo)
+}
+
 type onFriendshipListener struct {
 	ctx context.Context
 }

@@ -141,6 +141,9 @@ func (m *MsgListenerCallBak) OnRecvOnlineOnlyMessage(message string) {
 
 }
 
+func (m *MsgListenerCallBak) OnMessageSeqUpdated(seqUpdateInfo string) {
+}
+
 type testFriendshipListener struct {
 }
 
