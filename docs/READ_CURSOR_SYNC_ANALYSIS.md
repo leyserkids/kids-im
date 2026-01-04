@@ -322,70 +322,81 @@ func (c *Conversation) checkAndNotifyReadStateChanged(ctx context.Context, conve
 
 ---
 
-## 八、待实现的同步场景
-
-以下场景需要在未来实现，以确保 ReadCursor 数据的准确性。
+## 八、同步场景实现
 
 ### 8.1 同步时机总览
 
 | 时机 | 触发点 | 同步范围 | 优先级 | 状态 |
 |------|--------|----------|--------|------|
 | 连接成功/重连 | `MsgSyncEnd` | 所有会话 | P0 | ✅ 已实现 |
-| 应用唤醒 | `CmdWakeUpDataSync` | 所有会话? | P1 | ❌ 待实现 |
-| 成员退出群聊 | `MemberQuitNotification` | 当前群 | P1 | ❌ 待实现 |
-| 成员被踢出群聊 | `MemberKickedNotification` | 当前群 | P1 | ❌ 待实现 |
-| 新成员加入群聊 | `MemberEnterNotification` | 当前群 | P1 | ❌ 待实现 |
-| 群解散 | `GroupDismissedNotification` | 当前群 | P2 | ❌ 待实现 |
+| 应用唤醒/数据同步 | `syncData` (CmdSyncData) | 所有会话 | P1 | ✅ 已实现 |
+| 成员退出群聊 | `MemberQuitNotification` (1504) | 当前群 | P1 | ✅ 已实现 |
+| 成员被踢出群聊 | `MemberKickedNotification` (1508) | 当前群 | P1 | ✅ 已实现 |
+| 新成员加入群聊 | `MemberEnterNotification` (1510) | 当前群 | P1 | ✅ 已实现 |
+| 新成员被邀请 | `MemberInvitedNotification` (1509) | 当前群 | P1 | ✅ 已实现 |
+| 群解散 | `GroupDismissedNotification` (1511) | 当前群 | P2 | ✅ 已实现 |
 
 ---
 
-### 8.2 应用唤醒 ❌
+### 8.2 应用唤醒 ✅
 
 **场景**：
 - 移动端应用从后台切换到前台
 - 桌面端从息屏恢复
+- 页面刷新重新加载
 
-**触发点**：`MsgSyncer.handlePushMsgAndEvent` → `case CmdWakeUpDataSync`
+**触发点**：`notification.go` → `syncData` 函数末尾
 
-**处理逻辑**：
+**实现代码**：
 ```go
-func (m *MsgSyncer) doWakeupDataSync(ctx context.Context) {
-    // 现有逻辑...
+func (c *Conversation) syncData(c2v common.Cmd2Value) {
+    // ... 现有代码 ...
 
-    // 新增：同步最近活跃会话的 cursor
-    m.syncRecentReadCursors(ctx)
+    runSyncFunctions(ctx, asyncFuncs, asyncNoWait)
+
+    // 异步同步所有 ReadCursor
+    go c.syncAllReadCursors(ctx)
 }
 ```
 
-**同步范围**：最近活跃的 N 个会话
+**同步范围**：所有会话（单聊 + 群聊）
 
 **原因**：后台期间可能错过了推送通知
 
 ---
 
-### 8.3 成员退出群聊 ❌
+### 8.3 成员退出群聊 ✅
 
 **场景**：群成员主动退出群聊
 
-**触发点**：`group/notification.go` → `case MemberQuitNotification`
+**触发点**：`notification.go` → `doNotificationManager` → `handleGroupMemberChangeForReadCursor`
 
-**处理逻辑**：
+**实现代码**：
 ```go
-func (c *Conversation) handleMemberQuit(ctx context.Context, conversationID, userID string) {
-    // 1. 删除该成员的 cursor
-    c.db.DeleteReadCursor(ctx, conversationID, userID)
+// handleMemberQuitForReadCursor 成员退出 - 删除 cursor，重算 allReadSeq
+func (c *Conversation) handleMemberQuitForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+    var detail sdkws.MemberQuitTips
+    if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+        log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+        return
+    }
 
-    // 2. 重新计算 allReadSeq（可能会增加）
-    newAllReadSeq := c.db.GetAllReadSeqFromCursors(ctx, conversationID, c.loginUserID)
+    // 跳过自己退出的情况
+    if detail.QuitUser.UserID == c.loginUserID {
+        return
+    }
 
-    // 3. 更新 state
-    c.db.UpsertReadState(ctx, &LocalReadState{
-        ConversationID: conversationID,
-        AllReadSeq:     newAllReadSeq,
-    })
+    conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+    c.handleMemberLeftForReadCursor(ctx, conversationID, []string{detail.QuitUser.UserID})
+}
 
-    // 4. 通知前端（如果已订阅）
-    c.checkAndNotifyReadStateChanged(ctx, conversationID)
+// handleMemberLeftForReadCursor 成员离开 - 删除 cursor，重算 allReadSeq
+func (c *Conversation) handleMemberLeftForReadCursor(ctx context.Context, conversationID string, userIDs []string) {
+    for _, userID := range userIDs {
+        c.db.DeleteReadCursor(ctx, conversationID, userID)
+    }
+    // 重新计算 allReadSeq 并通知
+    c.updateReadStateAfterSync(ctx, conversationID)
 }
 ```
 
@@ -393,68 +404,125 @@ func (c *Conversation) handleMemberQuit(ctx context.Context, conversationID, use
 
 ---
 
-### 8.4 成员被踢出群聊 ❌
+### 8.4 成员被踢出群聊 ✅
 
 **场景**：群成员被管理员踢出
 
-**触发点**：`group/notification.go` → `case MemberKickedNotification`
+**触发点**：`notification.go` → `doNotificationManager` → `handleGroupMemberChangeForReadCursor`
 
-**处理逻辑**：与"成员退出"相同，需要对每个被踢成员执行 `handleMemberQuit`
-
----
-
-### 8.5 新成员加入群聊 ❌
-
-**场景**：
-- 新成员通过邀请加入
-- 新成员申请加入被批准
-
-**触发点**：
-- `group/notification.go` → `case MemberEnterNotification`
-- `group/notification.go` → `case MemberInvitedNotification`
-
-**处理逻辑**：
+**实现代码**：
 ```go
-func (c *Conversation) handleMemberEnter(ctx context.Context, conversationID, userID string) {
-    // 1. 为新成员创建 cursor（初始 maxReadSeq = 0）
-    cursor := &model_struct.LocalReadCursor{
-        ConversationID: conversationID,
-        UserID:         userID,
-        MaxReadSeq:     0,
+// handleMemberKickedForReadCursor 成员被踢 - 删除 cursors，重算 allReadSeq
+func (c *Conversation) handleMemberKickedForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+    var detail sdkws.MemberKickedTips
+    if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+        log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+        return
     }
-    c.db.UpsertReadCursor(ctx, cursor)
 
-    // 2. 重新计算 allReadSeq（变为 0）
-    c.db.UpsertReadState(ctx, &LocalReadState{
-        ConversationID: conversationID,
-        AllReadSeq:     0,
-    })
+    var userIDs []string
+    for _, member := range detail.KickedUserList {
+        // 跳过自己
+        if member.UserID != c.loginUserID {
+            userIDs = append(userIDs, member.UserID)
+        }
+    }
 
-    // 3. 通知前端（如果已订阅）
-    c.checkAndNotifyReadStateChanged(ctx, conversationID)
+    if len(userIDs) == 0 {
+        return
+    }
+
+    conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+    c.handleMemberLeftForReadCursor(ctx, conversationID, userIDs)
 }
 ```
 
-**影响**：`allReadSeq` 会变为 **0**（因为新成员还没读任何消息）
-
-**注意**：这会导致所有消息暂时显示为"未全部已读"，直到新成员开始阅读
+**影响**：与"成员退出"相同，`allReadSeq` 可能会增加
 
 ---
 
-### 8.6 群解散 ❌
+### 8.5 新成员加入群聊 ✅
+
+**场景**：
+- 新成员通过邀请加入（MemberInvitedNotification）
+- 新成员申请加入被批准（MemberEnterNotification）
+
+**触发点**：`notification.go` → `doNotificationManager` → `handleGroupMemberChangeForReadCursor`
+
+**实现代码**：
+```go
+// handleMemberInvitedForReadCursor 成员被邀请 - 从服务器同步 cursor
+func (c *Conversation) handleMemberInvitedForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+    var detail sdkws.MemberInvitedTips
+    if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+        log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+        return
+    }
+
+    conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+    c.handleMemberEnterForReadCursorInternal(ctx, conversationID)
+}
+
+// handleMemberEnterForReadCursor 成员进入 - 从服务器同步 cursor
+func (c *Conversation) handleMemberEnterForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+    var detail sdkws.MemberEnterTips
+    if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+        log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+        return
+    }
+
+    // 跳过自己
+    if detail.EntrantUser.UserID == c.loginUserID {
+        return
+    }
+
+    conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+    c.handleMemberEnterForReadCursorInternal(ctx, conversationID)
+}
+
+// handleMemberEnterForReadCursorInternal - 从服务器同步 cursor（获取真实阅读位置）
+func (c *Conversation) handleMemberEnterForReadCursorInternal(ctx context.Context, conversationID string) {
+    // 不要本地创建 maxReadSeq=0 的 cursor
+    // 而是从服务器同步获取真实的阅读位置
+    if err := c.SyncReadCursors(ctx, []string{conversationID}); err != nil {
+        log.ZWarn(ctx, "SyncReadCursors failed after member enter", err, "conversationID", conversationID)
+    }
+}
+```
+
+**设计说明**：
+- **不直接创建 maxReadSeq=0 的 cursor**：避免 allReadSeq 错误变为 0
+- **从服务器同步**：获取新成员的真实阅读位置
+- 服务器可能保留重新加入成员之前的阅读记录
+- 对于全新成员，服务器返回的数据也是准确的
+
+---
+
+### 8.6 群解散 ✅
 
 **场景**：群被群主解散
 
-**触发点**：`group/notification.go` → `case GroupDismissedNotification`
+**触发点**：`notification.go` → `doNotificationManager` → `handleGroupMemberChangeForReadCursor`
 
-**处理逻辑**：
+**实现代码**：
 ```go
-func (c *Conversation) handleGroupDismissed(ctx context.Context, conversationID string) {
-    // 1. 删除该群的所有 cursor
-    c.db.DeleteReadCursorsByConversationID(ctx, conversationID)
+// handleGroupDismissedForReadCursor 群解散 - 清理所有 cursor 和 state
+func (c *Conversation) handleGroupDismissedForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+    var detail sdkws.GroupDismissedTips
+    if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
+        log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
+        return
+    }
 
-    // 2. 删除该群的 state
-    c.db.DeleteReadState(ctx, conversationID)
+    conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+
+    if err := c.db.DeleteReadCursorsByConversationID(ctx, conversationID); err != nil {
+        log.ZWarn(ctx, "DeleteReadCursorsByConversationID failed", err, "conversationID", conversationID)
+    }
+
+    if err := c.db.DeleteReadState(ctx, conversationID); err != nil {
+        log.ZWarn(ctx, "DeleteReadState failed", err, "conversationID", conversationID)
+    }
 }
 ```
 
@@ -462,10 +530,55 @@ func (c *Conversation) handleGroupDismissed(ctx context.Context, conversationID 
 
 ---
 
-### 8.7 实现建议
+### 8.7 实现架构
 
-1. **异步执行**：所有同步操作应异步执行，不阻塞 UI 渲染
+**统一入口**：所有成员变动的 ReadCursor 处理在 `doNotificationManager` 中统一处理：
 
-2. **成员变化及时处理**：成员加入/退出时立即更新本地数据，无需从服务端同步
+```go
+func (c *Conversation) doNotificationManager(c2v common.Cmd2Value) {
+    ctx := c2v.Ctx
+    allMsg := c2v.Value.(sdk_struct.CmdNewMsgComeToConversation).Msgs
 
-3. **只通知已订阅会话**：使用 `checkAndNotifyReadStateChanged` 确保只有前端关心的会话才触发回调
+    for conversationID, msgs := range allMsg {
+        for _, msg := range msgs.Msgs {
+            if msg.ContentType > constant.FriendNotificationBegin && msg.ContentType < constant.FriendNotificationEnd {
+                c.relation.DoNotification(ctx, msg)
+            } else if msg.ContentType > constant.UserNotificationBegin && msg.ContentType < constant.UserNotificationEnd {
+                c.user.DoNotification(ctx, msg)
+            } else if msg.ContentType > constant.GroupNotificationBegin && msg.ContentType < constant.GroupNotificationEnd {
+                c.group.DoNotification(ctx, msg)
+                // 处理成员变动的 ReadCursor 更新
+                c.handleGroupMemberChangeForReadCursor(ctx, msg)
+            } else {
+                c.DoNotification(ctx, msg)
+            }
+        }
+        // ...
+    }
+}
+
+// handleGroupMemberChangeForReadCursor 处理群成员变动对 ReadCursor 的影响
+func (c *Conversation) handleGroupMemberChangeForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
+    go func() {
+        switch msg.ContentType {
+        case constant.MemberQuitNotification:      // 1504
+            c.handleMemberQuitForReadCursor(ctx, msg)
+        case constant.MemberKickedNotification:    // 1508
+            c.handleMemberKickedForReadCursor(ctx, msg)
+        case constant.MemberInvitedNotification:   // 1509
+            c.handleMemberInvitedForReadCursor(ctx, msg)
+        case constant.MemberEnterNotification:     // 1510
+            c.handleMemberEnterForReadCursor(ctx, msg)
+        case constant.GroupDismissedNotification:  // 1511
+            c.handleGroupDismissedForReadCursor(ctx, msg)
+        }
+    }()
+}
+```
+
+**设计原则**：
+
+1. **异步执行**：所有 ReadCursor 处理在 goroutine 中执行，不阻塞通知处理
+2. **跳过自己**：成员变动时跳过当前登录用户
+3. **只通知已订阅会话**：使用 `updateReadStateAfterSync` 内部的 `checkAndNotifyReadStateChanged`
+4. **不修改 Group 模块**：在 Conversation 模块中独立解析通知并处理 ReadCursor
