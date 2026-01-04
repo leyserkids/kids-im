@@ -23,6 +23,7 @@ import {
   GetGroupMemberByTimeParams,
   GetGroupMemberParams,
   GetGroupMessageReaderParams,
+  GetGroupMessageReadMemberListParams,
   GetHistoryMsgParams,
   GetOneConversationParams,
   ImageMsgParamsByURL,
@@ -89,6 +90,7 @@ import {
   GroupApplicationItem,
   GroupItem,
   GroupMemberItem,
+  GroupMessageReceipt,
   IMConfig,
   MessageItem,
   OfflinePush,
@@ -365,6 +367,16 @@ class SDK extends Emitter {
         params.offset,
         params.count,
       ]
+    );
+  };
+  getGroupMessageReadMemberList = (
+    params: GetGroupMessageReadMemberListParams,
+    operationID = uuidv4()
+  ) => {
+    return this._invoker<GroupMessageReceipt[]>(
+      'getGroupMessageReadMemberList',
+      window.getGroupMessageReadMemberList,
+      [operationID, params.conversationID, params.seq]
     );
   };
   getGroupMemberList = (

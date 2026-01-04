@@ -179,6 +179,12 @@ export type GroupMemberItem = {
   operatorUserID: string;
   ex: string;
 };
+export type GroupMessageReceipt = {
+  groupID: string;
+  conversationID: string;
+  userID: string;
+  hasReadSeq: number;
+};
 export type ConversationItem = {
   conversationID: string;
   conversationType: SessionType;

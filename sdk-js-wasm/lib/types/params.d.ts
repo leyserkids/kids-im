@@ -50,6 +50,10 @@ export declare type GetGroupMessageReaderParams = {
     offset: number;
     count: number;
 };
+export declare type GetGroupMessageReadMemberListParams = {
+    conversationID: string;
+    seq: number;
+};
 export declare type GetGroupMemberParams = {
     groupID: string;
     filter: GroupMemberFilter;

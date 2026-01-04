@@ -74,6 +74,10 @@ export type GetGroupMessageReaderParams = {
   offset: number;
   count: number;
 };
+export type GetGroupMessageReadMemberListParams = {
+  conversationID: string;
+  seq: number;
+};
 export type GetGroupMemberParams = {
   groupID: string;
   filter: GroupMemberFilter;

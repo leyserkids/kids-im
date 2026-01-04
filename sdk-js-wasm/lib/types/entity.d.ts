@@ -162,6 +162,12 @@ export declare type GroupMemberItem = {
     operatorUserID: string;
     ex: string;
 };
+export declare type GroupMessageReceipt = {
+    groupID: string;
+    conversationID: string;
+    userID: string;
+    hasReadSeq: number;
+};
 export declare type ConversationItem = {
     conversationID: string;
     conversationType: SessionType;

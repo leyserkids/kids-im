@@ -1273,6 +1273,9 @@ class SDK extends Emitter {
                 params.count,
             ]);
         };
+        this.getGroupMessageReadMemberList = (params, operationID = v4()) => {
+            return this._invoker('getGroupMessageReadMemberList', window.getGroupMessageReadMemberList, [operationID, params.conversationID, params.seq]);
+        };
         this.getGroupMemberList = (params, operationID = v4()) => {
             return this._invoker('getGroupMemberList', window.getGroupMemberList, [operationID, params.groupID, params.filter, params.offset, params.count]);
         };
