@@ -1,6 +1,6 @@
 {
   "name": "@openim/wasm-client-sdk",
-  "version": "3.8.3-kids.9",
+  "version": "3.8.3-kids.10",
   "description": "open im sdk for web",
   "source": "src/index.ts",
   "main": "lib/index.js",
@@ -23,7 +23,7 @@
     "build": "rimraf lib && rollup -c && tsc-alias",
     "cm": "cz",
     "lint": "eslint ./src/ --fix",
-    "prepare": "husky install",
+    "prepare": "husky install || true",
     "semantic-release": "semantic-release",
     "test:watch": "jest --watch",
     "test": "jest --coverage",
