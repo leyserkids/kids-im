@@ -264,7 +264,8 @@ func (u *LoginMgr) logoutListener(ctx context.Context) {
 
 func NewLoginMgr() *LoginMgr {
 	return &LoginMgr{
-		info: &ccontext.GlobalConfig{},
+		info:        &ccontext.GlobalConfig{},
+		loginStatus: LogoutStatus,
 	}
 }
 func (u *LoginMgr) getLoginStatus(_ context.Context) int {
