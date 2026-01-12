@@ -155,8 +155,16 @@ func (c *ConsumerHandler) Push2User(ctx context.Context, userIDs []string, msg *
 		t := time.Since(duration)
 		log.ZInfo(ctx, "Get msg from msg_transfer And push msg end", "msg", msg.String(), "time cost", t)
 	}(time.Now())
-	if err := c.webhookBeforeOnlinePush(ctx, &c.config.WebhooksConfig.BeforeOnlinePush, userIDs, msg); err != nil {
-		return err
+
+	// Filter users for webhook (DND filter + @mention override + exclude sender)
+	conversationID := conversationutil.GenConversationIDForSingle(msg.SendID, msg.RecvID)
+	webhookUserIDs := c.filterBeforeOnlinePushWebhookUserIDs(ctx, conversationID, userIDs, msg)
+
+	// Only call webhook for user messages (not system notifications) with non-empty user list
+	if len(webhookUserIDs) > 0 && msg.ContentType < constant.NotificationBegin {
+		if err := c.webhookBeforeOnlinePush(ctx, &c.config.WebhooksConfig.BeforeOnlinePush, webhookUserIDs, msg); err != nil {
+			return err
+		}
 	}
 
 	wsResults, err := c.GetConnsAndOnlinePush(ctx, msg, userIDs)
@@ -217,6 +225,39 @@ func (c *ConsumerHandler) shouldPushOffline(_ context.Context, msg *sdkws.MsgDat
 	return true
 }
 
+// filterBeforeOnlinePushWebhookUserIDs filters user IDs for BeforeOnlinePush webhook calls:
+// 1. Filters out DND users via GetConversationOfflinePushUserIDs
+// 2. Adds @mentioned users back (they receive push even with DND)
+// 3. Excludes sender (avoids empty webhook calls)
+func (c *ConsumerHandler) filterBeforeOnlinePushWebhookUserIDs(
+	ctx context.Context,
+	conversationID string,
+	allUserIDs []string,
+	msg *sdkws.MsgData,
+) []string {
+	// Filter DND users
+	webhookUserIDs, err := c.conversationClient.GetConversationOfflinePushUserIDs(ctx, conversationID, allUserIDs)
+	if err != nil {
+		log.ZWarn(ctx, "GetConversationOfflinePushUserIDs failed, fallback to all users", err)
+		webhookUserIDs = allUserIDs
+	}
+
+	// Add @mentioned users back (they should receive push even if DND is enabled)
+	if datautil.Contain(constant.AtAllString, msg.AtUserIDList...) {
+		// @all: all users should receive push
+		webhookUserIDs = allUserIDs
+	} else {
+		for _, atUserID := range msg.AtUserIDList {
+			if !datautil.Contain(atUserID, webhookUserIDs...) && datautil.Contain(atUserID, allUserIDs...) {
+				webhookUserIDs = append(webhookUserIDs, atUserID)
+			}
+		}
+	}
+
+	// Exclude sender
+	return datautil.DeleteElems(webhookUserIDs, msg.SendID)
+}
+
 func (c *ConsumerHandler) GetConnsAndOnlinePush(ctx context.Context, msg *sdkws.MsgData, pushToUserIDs []string) ([]*msggateway.SingleMsgToUserResults, error) {
 	if msg != nil && msg.Status == constant.MsgStatusSending {
 		msg.Status = constant.MsgStatusSendSuccess
@@ -249,17 +290,31 @@ func (c *ConsumerHandler) Push2Group(ctx context.Context, groupID string, msg *s
 		t := time.Since(duration)
 		log.ZInfo(ctx, "Get group msg from msg_transfer and push msg end", "msg", msg.String(), "groupID", groupID, "time cost", t)
 	}(time.Now())
-	var pushToUserIDs []string
-	if err = c.webhookBeforeGroupOnlinePush(ctx, &c.config.WebhooksConfig.BeforeGroupOnlinePush, groupID, msg,
-		&pushToUserIDs); err != nil {
-		return err
-	}
 
+	var pushToUserIDs []string
+
+	// Get group members first
 	err = c.groupMessagesHandler(ctx, groupID, &pushToUserIDs, msg)
 	if err != nil {
 		return err
 	}
 
+	// Filter users for webhook (DND filter + @mention override + exclude sender)
+	conversationID := conversationutil.GenGroupConversationID(groupID)
+	webhookUserIDs := c.filterBeforeOnlinePushWebhookUserIDs(ctx, conversationID, pushToUserIDs, msg)
+
+	// Debug log for DND filtering
+	log.ZInfo(ctx, "[DND-Group] Filtered users for webhook", "groupID", groupID, "totalUsers", len(pushToUserIDs), "webhookUsers", len(webhookUserIDs), "filtered", len(pushToUserIDs)-len(webhookUserIDs), "atUserIDs", msg.AtUserIDList)
+
+	// Only call webhook for user messages (not system notifications) with non-empty user list
+	if len(webhookUserIDs) > 0 && msg.ContentType < constant.NotificationBegin {
+		if err = c.webhookBeforeGroupOnlinePush(ctx, &c.config.WebhooksConfig.BeforeGroupOnlinePush, groupID, msg,
+			&webhookUserIDs); err != nil {
+			return err
+		}
+	}
+
+	// WebSocket push to all group members (including DND users)
 	wsResults, err := c.GetConnsAndOnlinePush(ctx, msg, pushToUserIDs)
 	if err != nil {
 		return err

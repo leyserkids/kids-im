@@ -1,4 +1,4 @@
-url: http://127.0.0.1:10006/callbackExample
+url: http://127.0.0.1:4000/anonymous-api/worker/v4/fcm/chat
 beforeSendSingleMsg:
   enable: false
   timeout: 5
@@ -63,11 +63,11 @@ beforeOfflinePush:
   timeout: 5
   failedContinue: true
 beforeOnlinePush:
-  enable: false
+  enable: true
   timeout: 5
   failedContinue: true
 beforeGroupOnlinePush:
-  enable: false
+  enable: true
   timeout: 5
   failedContinue: true
 beforeAddFriend:

@@ -124,6 +124,7 @@ func (c *ConsumerHandler) webhookBeforeGroupOnlinePush(
 			AtUserIDs:   msg.AtUserIDList,
 			Content:     GetContent(msg),
 			Seq:         msg.Seq,
+			UserIDs:     *pushToUserIDs, // Pass DND-filtered user list to webhook
 		}
 		resp := &callbackstruct.CallbackBeforeSuperGroupOnlinePushResp{}
 		if err := c.webhookClient.SyncPost(ctx, req.GetCallbackCommand(), req, resp, before); err != nil {

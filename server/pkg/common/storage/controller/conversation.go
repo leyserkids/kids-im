@@ -269,6 +269,8 @@ func (c *conversationDatabase) SetUserConversations(ctx context.Context, ownerUs
 					return err
 				}
 			}
+			// Clear the NotReceiveMessageUserIDs cache for existing conversations (fix for DND cache issue)
+			cache = cache.DelConversationNotReceiveMessageUserIDs(conversationIDs...)
 		}
 		var existConversationIDs []string
 		for _, conversation := range existConversations {

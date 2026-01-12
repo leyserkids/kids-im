@@ -44,6 +44,7 @@ type CallbackBeforeSuperGroupOnlinePushReq struct {
 	AtUserIDs   []string `json:"atUserIDList"`
 	Content     string   `json:"content"`
 	Seq         int64    `json:"seq"`
+	UserIDs     []string `json:"userIDList"` // Users to push (DND users filtered out)
 }
 
 type CallbackBeforeSuperGroupOnlinePushResp struct {
