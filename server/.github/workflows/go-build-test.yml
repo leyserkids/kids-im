@@ -127,6 +127,9 @@ jobs:
         run: |
           yq e '.groupCreated.unreadCount = true' -i ${{ env.CONFIG_PATH }}
           yq e '.friendApplicationApproved.unreadCount = true' -i ${{ env.CONFIG_PATH }}
+          # Disable online push webhook (CI environment has no FCM service)
+          yq e '.beforeOnlinePush.enable = false' -i config/webhooks.yml
+          yq e '.beforeGroupOnlinePush.enable = false' -i config/webhooks.yml
 
       - name: Start Server Services
         run: |
