@@ -17,6 +17,7 @@
 | 07 | [Redis Token 存储方案](07-redis-token-storage.md) | String vs Hash 对比、TTL 刷新策略 |
 | 08 | [消息保留策略](08-message-retention.md) | minSeq 机制、时间/数量限制、Cron 清理 |
 | 09 | [消息已读设计](09-read-receipt.md) | ReadCursor、allReadSeq、已读回执同步 |
+| 10 | [免打扰设计](10-do-not-disturb.md) | DND 过滤、@mention 绕过、Webhook 层实现 |
 
 ---
 
@@ -81,3 +82,4 @@
 | 多设备登录 | 4 种策略可配置 | 03 |
 | 消息保留 | minSeq 指针 + 时间/数量限制 | 08 |
 | 消息已读 | ReadCursor + allReadSeq 计算 | 09 |
+| 免打扰 | Webhook 层过滤 + @mention 绕过 | 10 |
