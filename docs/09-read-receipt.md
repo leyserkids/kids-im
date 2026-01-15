@@ -106,19 +106,62 @@ WHERE conversation_id = ? AND user_id != ?  -- 排除自己
 
 ## 四、同步策略
 
+**设计原则**：
+初始全量同步，之后按需同步。
+- **全量同步**：在 `IncrSyncConversations` 完成后，保证会话列表已同步到本地。且登录/重连/应用唤醒都会走到这里。
+- **按需同步**：发/收消息创建新会话时（不走 `IncrSyncConversations` 路径）、群成员变动时、会话移除时再局部同步。
+
 ### 4.1 同步时机
 
-| 时机 | 触发点 | 同步范围 |
-|------|--------|----------|
-| 连接成功/重连 | `MsgSyncEnd` | 所有会话 |
-| 应用唤醒 | `syncData` | 所有会话 |
-| 成员退出群聊 | `MemberQuitNotification` (1504) | 当前群 |
-| 成员被踢出 | `MemberKickedNotification` (1508) | 当前群 |
-| 新成员加入 | `MemberEnterNotification` (1510) | 当前群 |
-| 新成员被邀请 | `MemberInvitedNotification` (1509) | 当前群 |
-| 群解散 | `GroupDismissedNotification` (1511) | 当前群 |
+| 时机 | 触发点 | 操作 | 同步范围 |
+|------|--------|------|----------|
+| 会话同步完成 | `IncrSyncConversations` 完成 | 全量同步 | 所有会话 |
+| 发/收消息**新建会话** | `InsertConversation` | 按需同步 | 当前会话 |
+| 删除会话 | `syncer.Delete` / `DeleteConversationAndDeleteAllMsg` | 清理 | 当前会话 |
+| 新建群 | `GroupCreatedNotification` (1501) | 不处理（依靠新建会话处理） | - |
+| 解散群 | `GroupDismissedNotification` (1511) | 不处理（依靠删除会话处理） | - |
+| 成员主动退群 | `MemberQuitNotification` (1504) | 删除 cursor | 当前群 |
+| 成员被踢出群 | `MemberKickedNotification` (1508) | 删除 cursor | 当前群 |
+| 新成员被拉入群 | `MemberInvitedNotification` (1509) | 同步 | 当前群 |
+| 新成员加入（请求加入同意后） | `MemberEnterNotification` (1510) | 同步 | 当前群 |
 
-### 4.2 连接成功后全量同步
+### 4.2 会话同步完成后全量同步
+
+登录、重连、应用唤醒都会触发 `IncrSyncConversations`，在其完成后进行全量同步：
+
+```go
+// 位置：incremental_sync.go - IncrSyncConversations
+func (c *Conversation) IncrSyncConversations(ctx context.Context) error {
+    conversationSyncer := syncer.VersionSynchronizer[...]{...}
+
+    if err := conversationSyncer.IncrementalSync(); err != nil {
+        return err
+    }
+
+    // 会话同步完成后，同步所有 ReadCursors
+    go c.syncAllReadCursors(ctx)
+    return nil
+}
+```
+
+**为什么在这里同步**：
+1. 保证会话列表已完全同步到本地
+2. 避免与 `IncrSyncConversations` 并发执行导致的竞态问题
+3. 统一登录、重连、应用唤醒三种场景
+
+### 4.3 发/收消息新建会话时按需同步
+
+当发消息或收消息导致创建新会话时（不走 `IncrSyncConversations` 路径），需要按需同步：
+
+```go
+// 位置：notification.go - doUpdateConversation - InsertConversation 后
+if lc.ConversationType == constant.SingleChatType ||
+   lc.ConversationType == constant.ReadGroupChatType {
+    go c.syncReadCursorsForNewConversation(ctx, lc.ConversationID)
+}
+```
+
+### 4.4 全量同步实现
 
 ```go
 func (c *Conversation) syncAllReadCursors(ctx context.Context) {
@@ -137,7 +180,7 @@ func (c *Conversation) syncAllReadCursors(ctx context.Context) {
 }
 ```
 
-### 4.3 成员变动处理
+### 4.4 成员变动处理
 
 **成员退出/被踢**：删除 cursor，重算 allReadSeq（可能增加）
 
@@ -158,6 +201,37 @@ func (c *Conversation) handleMemberEnterForReadCursorInternal(ctx context.Contex
     c.SyncReadCursors(ctx, []string{conversationID})
 }
 ```
+
+### 4.5 会话删除时清理
+
+会话删除时需要清理相关的 ReadCursor 和 ReadState 数据：
+
+```go
+// cleanupReadCursorsForDeletedConversation cleans up ReadCursor and ReadState when a conversation is deleted
+func (c *Conversation) cleanupReadCursorsForDeletedConversation(ctx context.Context, conversationID string) {
+    // 删除所有 cursor
+    c.db.DeleteReadCursorsByConversationID(ctx, conversationID)
+    // 删除 state
+    c.db.DeleteReadState(ctx, conversationID)
+
+    // Clean up subscription state for this conversation.
+    // This is not strictly necessary for functionality (the callback won't fire anyway
+    // since ReadState data is deleted), but keeps the in-memory subscription map clean.
+    c.subscribedConversationsMu.Lock()
+    delete(c.subscribedConversations, conversationID)
+    c.subscribedConversationsMu.Unlock()
+}
+```
+
+**清理触发场景**：
+
+| 场景 | 是否清理 | 原因 |
+|------|---------|------|
+| `syncer.WithDelete` (同步删除) | ✅ 清理 | 会话被彻底删除 |
+| `DeleteConversationAndDeleteAllMsg` (用户删除) | ✅ 清理 | 用户意图是删除会话 |
+| `HideConversation` (隐藏会话) | ❌ 不清理 | 只是隐藏，可能重新打开 |
+| `ClearConversationAndDeleteAllMsg` (清空消息) | ❌ 不清理 | 只是清空消息，会话还在 |
+| `GroupDismissedNotification` (群解散) | ❌ 不清理 | 会话还在，等用户删除时再清理 |
 
 ---
 
@@ -268,8 +342,23 @@ if (isSender && isRead) {
 | `pkg/db/model_struct/data_model_struct.go` | 表结构定义 |
 | `pkg/db/read_cursor_model.go` | 数据库操作 |
 | `internal/conversation_msg/read_drawing.go` | 已读回执处理 |
-| `internal/conversation_msg/sync.go` | 同步逻辑 |
+| `internal/conversation_msg/sync.go` | 同步逻辑、清理逻辑 |
+| `internal/conversation_msg/incremental_sync.go` | 会话同步完成后触发全量 ReadCursor 同步 |
+| `internal/conversation_msg/notification.go` | 发/收消息创建会话时的按需同步 |
+| `internal/conversation_msg/api.go` | 用户删除会话时的清理 |
 | `sdk_callback/callback.go` | 回调接口定义 |
+
+### 关键函数
+
+| 函数 | 位置 | 说明 |
+|------|------|------|
+| `IncrSyncConversations` | incremental_sync.go | 会话同步，完成后触发全量 ReadCursor 同步 |
+| `syncAllReadCursors` | sync.go | 全量同步所有会话的 ReadCursor |
+| `syncReadCursorsForNewConversation` | sync.go | 按需同步：发/收消息创建新会话时 |
+| `cleanupReadCursorsForDeletedConversation` | sync.go | 会话删除时清理 ReadCursor 和 ReadState |
+| `handleGroupMemberChangeForReadCursor` | sync.go | 群成员变动时的 ReadCursor 处理 |
+| `SyncReadCursors` | sync.go | 从服务器同步 ReadCursor |
+| `updateReadStateAfterSync` | sync.go | 同步后重算 allReadSeq |
 
 ### 服务端 (openim-server)
 
@@ -289,7 +378,7 @@ if (isSender && isRead) {
 
 ## 八、注意事项
 
-1. **计算 allReadSeq 时排除自己**：必须传入当前登录用户 ID
+1. **计算 allReadSeq 时排除自己**：必须传入当前登录用户 ID (另外同步数据时也派出了当前登录用户，双保险)
 2. **新成员影响**：新成员加入会使 allReadSeq 可能归零
 3. **事件触发条件**：只有 allReadSeq 变化时才触发回调
 4. **清理策略**：退出群/删除会话时需删除相关 cursor 和 state
