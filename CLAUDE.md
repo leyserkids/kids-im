@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **monorepo** for OpenIM, an open-source instant messaging platform. It's a fork of the upstream OpenIM project with custom enhancements for **unified group/single chat read receipts**.
+This is a **monorepo** for `kids-im`, an open-source instant messaging platform. It's a fork of the upstream OpenIM project with custom enhancements for **unified group/single chat read receipts** and more.
 
 **Base Versions:**
 - openim-protocol: v0.0.72-alpha.78
-- openim-server: v3.8.3-patch.3
 - openim-sdk-core: v3.8.3-patch.3
+- openim-sdk-js-wasm: v3.8.3-patch.3
+- openim-server: v3.8.3-patch.3
 
 ## Repository Structure
 
@@ -19,7 +20,7 @@ openim/
 ├── go.work               # Go workspace for local dependencies
 ├── protocol/             # Protobuf definitions & shared types (Go)
 ├── server/               # Backend microservices (Go)
-├── sdk-core/             # Cross-platform SDK for iOS/Android/PC/WASM (Go)
+├── sdk-core/             # Cross-platform SDK for WASM (Go)
 ├── sdk-js-wasm/          # TypeScript/JavaScript WebAssembly wrapper
 └── docs/                 # Technical architecture documentation (Chinese)
 ```
@@ -46,16 +47,16 @@ use (
 ### Full Build (from root)
 ```bash
 go work sync                          # Sync workspace dependencies
-cd protocol && mage                   # Generate protobuf code
+cd protocol && ./gen.sh               # Generate protobuf code
 cd server && mage build               # Build server
-cd sdk-core && make build             # Build SDK
+cd sdk-core && make build-wasm        # Build SDK
 cd sdk-js-wasm && npm run build       # Build JS SDK
 ```
 
 ### protocol
 ```bash
 cd protocol
-mage                                  # Generate gRPC code and callers
+./gen.sh      # Generate gRPC code and callers
 ```
 Requires: `protoc-gen-go`, `protoc-gen-go-grpc`
 
@@ -72,11 +73,7 @@ go test ./...  # Run tests
 ### sdk-core
 ```bash
 cd sdk-core
-make build           # Build for current platform (requires CGO)
-make build-multiple  # Build for linux/amd64, linux/arm64
 make build-wasm      # Build WebAssembly module
-make ios             # Build iOS framework
-make android         # Build Android AAR
 make test            # Run unit tests
 make lint            # Run golangci-lint
 ```
@@ -86,7 +83,6 @@ make lint            # Run golangci-lint
 cd sdk-js-wasm
 npm install
 npm run build        # Compile TS + bundle, outputs to lib/
-npm run test         # Jest tests with coverage
 npm run lint         # ESLint with fixes
 npm run typecheck    # TypeScript type checking
 ```
@@ -96,7 +92,7 @@ npm run typecheck    # TypeScript type checking
 Workflows use **path-based triggers**:
 - `protocol/**` changes trigger: protocol.yml, server.yml, sdk-core.yml
 - `server/**` changes trigger: server.yml
-- `sdk-core/**` changes trigger: sdk-core.yml
+- `sdk-core/**` changes trigger: sdk-core.yml, sdk-js-wasm.yml
 - `sdk-js-wasm/**` changes trigger: sdk-js-wasm.yml
 
 See `.github/workflows/` for details.
