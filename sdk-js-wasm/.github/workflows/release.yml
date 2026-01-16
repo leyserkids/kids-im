@@ -109,3 +109,6 @@ jobs:
           Build Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push origin ${BRANCH_NAME}
+          # Create and push tag
+          git tag "v${{ steps.get_version.outputs.version }}"
+          git push origin "v${{ steps.get_version.outputs.version }}"

@@ -116,4 +116,8 @@ basepc
 .pnp.*
 
 # Compiled code
-# lib/
+lib/
+
+# Generated assets (built by CI)
+assets/openIM.wasm
+assets/version
