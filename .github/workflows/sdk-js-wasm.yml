@@ -1,0 +1,45 @@
+name: SDK JS WASM Test
+
+on:
+  push:
+    paths:
+      - 'sdk-js-wasm/**'
+      - '.github/workflows/sdk-js-wasm.yml'
+  pull_request:
+    paths:
+      - 'sdk-js-wasm/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: TypeScript Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: sdk-js-wasm
+        run: npm install
+
+      - name: Type check
+        working-directory: sdk-js-wasm
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: sdk-js-wasm
+        run: npm run lint
+
+      - name: Build
+        working-directory: sdk-js-wasm
+        run: npm run build
+
+      - name: Test
+        working-directory: sdk-js-wasm
+        run: npm test

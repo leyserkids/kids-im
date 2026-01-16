@@ -1,0 +1,117 @@
+name: SDK Core Build & Test
+
+on:
+  push:
+    paths:
+      - 'sdk-core/**'
+      - 'protocol/**'
+      - 'go.work'
+      - '.github/workflows/sdk-core.yml'
+  pull_request:
+    paths:
+      - 'sdk-core/**'
+      - 'protocol/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  go-build:
+    name: Build with Go ${{ matrix.go_version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go_version: ["1.21.x", "1.22.x"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go_version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go_version }}
+
+      - name: Get dependencies
+        run: |
+          go work sync
+          cd sdk-core && go mod download
+
+      - name: Build SDK core
+        working-directory: sdk-core
+        run: |
+          go mod tidy
+          go generate ./...
+
+      - name: Build WASM
+        working-directory: sdk-core/wasm/cmd
+        run: |
+          mkdir -p ../../_output/bin
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags "-s -w" -o ../../_output/bin/openIM.wasm main.go
+
+  integration-test:
+    name: Integration Test with Server
+    runs-on: ubuntu-latest
+    env:
+      CONFIG_PATH: server/config/notification.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Install tools
+        run: |
+          go install github.com/magefile/mage@latest
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Get dependencies
+        run: |
+          go work sync
+          cd server && go mod download
+          cd ../sdk-core && go mod download
+
+      - name: Modify Configuration
+        run: |
+          yq e '.groupCreated.isSendMsg = true' -i ${{ env.CONFIG_PATH }}
+          yq e '.friendApplicationApproved.isSendMsg = true' -i ${{ env.CONFIG_PATH }}
+
+      - name: Set up infra services
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "./server/docker-compose.ci.yml"
+
+      - name: Start Server
+        working-directory: server
+        run: |
+          mage build
+          mage start
+          mage check
+
+      - name: Run Integration Tests
+        working-directory: sdk-core
+        run: |
+          go mod tidy
+          cd integration_test
+          mkdir -p data
+          go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 20 -su 5 -lg 2 -cg 2 -cgm 3 -sm 10 -gm 10 -reg
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: go
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

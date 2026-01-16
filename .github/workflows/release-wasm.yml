@@ -1,0 +1,96 @@
+name: Release WASM SDK
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'sdk-core/version/version'
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Build and Release WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache-dependency-path: sdk-core/go.sum
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get dependencies
+        run: |
+          go work sync
+          cd sdk-core && go mod download
+
+      - name: Build WASM from sdk-core
+        working-directory: sdk-core
+        run: |
+          mkdir -p _output/bin
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags "-s -w" -o _output/bin/openIM.wasm wasm/cmd/main.go
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(cat sdk-core/version/version | tr -d '\r\n' | sed 's/^v//')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Copy WASM to sdk-js-wasm
+        run: |
+          mkdir -p sdk-js-wasm/assets
+          cp sdk-core/_output/bin/openIM.wasm sdk-js-wasm/assets/
+          cp sdk-core/version/version sdk-js-wasm/assets/
+
+      - name: Update package.json version
+        working-directory: sdk-js-wasm
+        run: npm version ${{ steps.get_version.outputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Install and build
+        working-directory: sdk-js-wasm
+        run: |
+          npm install
+          npm run build
+
+      - name: Prepare release
+        run: |
+          mkdir -p release-content
+          cp -r sdk-js-wasm/lib release-content/
+          cp -r sdk-js-wasm/assets release-content/
+          cp sdk-js-wasm/package.json release-content/
+          cp sdk-js-wasm/LICENSE release-content/ || true
+          cp sdk-js-wasm/README.md release-content/
+
+      - name: Check if release exists
+        id: check_release
+        run: |
+          BRANCH_NAME="release-${{ steps.get_version.outputs.version }}"
+          if git ls-remote --heads origin ${BRANCH_NAME} | grep -q ${BRANCH_NAME}; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to release branch
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          BRANCH_NAME="release-${VERSION}"
+          cd release-content
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan ${BRANCH_NAME}
+          git add -A
+          git commit -m "Release v${VERSION}"
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin ${BRANCH_NAME}
+          git tag "sdk-js-wasm/v${VERSION}"
+          git push origin "sdk-js-wasm/v${VERSION}"
