@@ -76,6 +76,10 @@ jobs:
           cp -r js-wasm/assets release-content/
           # Copy package.json for reference
           cp js-wasm/package.json release-content/
+          # Copy LICENSE
+          cp js-wasm/LICENSE release-content/
+          # Copy README
+          cp js-wasm/README.md release-content/
           # Create a release info file
           cat > release-content/RELEASE_INFO.md << EOF
           # Release Info
