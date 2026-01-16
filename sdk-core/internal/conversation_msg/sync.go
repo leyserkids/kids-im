@@ -24,6 +24,7 @@ import (
 	"github.com/openimsdk/openim-sdk-core/v3/pkg/utils"
 	"github.com/openimsdk/protocol/msg"
 	"github.com/openimsdk/protocol/sdkws"
+	"github.com/openimsdk/tools/errs"
 	"github.com/openimsdk/tools/utils/datautil"
 
 	"github.com/openimsdk/tools/log"
@@ -298,6 +299,8 @@ func (c *Conversation) checkAndNotifyReadStateChanged(ctx context.Context, conve
 func (c *Conversation) handleGroupMemberChangeForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
 	go func() {
 		switch msg.ContentType {
+		// Note: GroupCreatedNotification (1501) is handled by the unified new conversation sync
+		// in syncer.WithNotice and doUpdateConversation, no need to handle here
 		case constant.MemberQuitNotification: // 1504
 			c.handleMemberQuitForReadCursor(ctx, msg)
 		case constant.MemberKickedNotification: // 1508
@@ -306,8 +309,7 @@ func (c *Conversation) handleGroupMemberChangeForReadCursor(ctx context.Context,
 			c.handleMemberInvitedForReadCursor(ctx, msg)
 		case constant.MemberEnterNotification: // 1510
 			c.handleMemberEnterForReadCursor(ctx, msg)
-		case constant.GroupDismissedNotification: // 1511
-			c.handleGroupDismissedForReadCursor(ctx, msg)
+			// Note: GroupDismissedNotification (1511) cleanup is handled when user deletes the conversation
 		}
 	}()
 }
@@ -417,15 +419,113 @@ func (c *Conversation) handleMemberEnterForReadCursorInternal(ctx context.Contex
 	}
 }
 
-// handleGroupDismissedForReadCursor - group dismissed: clean up all cursor and state
-func (c *Conversation) handleGroupDismissedForReadCursor(ctx context.Context, msg *sdkws.MsgData) {
-	var detail sdkws.GroupDismissedTips
-	if err := utils.UnmarshalNotificationElem(msg.Content, &detail); err != nil {
-		log.ZWarn(ctx, "UnmarshalNotificationElem err", err)
-		return
+// ensureReadCursorsForConversation ensures the conversation has complete ReadCursor data.
+// Checks whether all other members (excluding self) have cursor data.
+// If any member is missing, syncs from server.
+func (c *Conversation) ensureReadCursorsForConversation(ctx context.Context, conversationID string) error {
+	log.ZDebug(ctx, "ensureReadCursorsForConversation", "conversationID", conversationID)
+
+	conv, err := c.db.GetConversation(ctx, conversationID)
+	if err != nil {
+		return c.handleConversationNotFound(ctx, conversationID, err)
 	}
 
-	conversationID := c.getConversationIDBySessionType(detail.Group.GroupID, constant.ReadGroupChatType)
+	expectedMembers, err := c.getExpectedMembersForReadCursor(ctx, conv)
+	if err != nil {
+		return err
+	}
+	if len(expectedMembers) == 0 {
+		return nil
+	}
+
+	missingMembers, err := c.findMissingCursorMembers(ctx, conversationID, expectedMembers)
+	if err != nil {
+		return err
+	}
+	if len(missingMembers) == 0 {
+		log.ZDebug(ctx, "ensureReadCursorsForConversation: all members have cursor",
+			"conversationID", conversationID, "memberCount", len(expectedMembers))
+		return nil
+	}
+
+	log.ZInfo(ctx, "ensureReadCursorsForConversation: missing cursors, syncing",
+		"conversationID", conversationID, "missingMembers", missingMembers)
+	return c.SyncReadCursors(ctx, []string{conversationID})
+}
+
+// handleConversationNotFound handles the case when conversation is not found locally.
+// If RecordNotFound, schedules a delayed sync; otherwise returns the error.
+func (c *Conversation) handleConversationNotFound(ctx context.Context, conversationID string, err error) error {
+	if errs.Unwrap(err) == errs.ErrRecordNotFound {
+		log.ZDebug(ctx, "ensureReadCursorsForConversation: conversation not found, scheduling delayed sync",
+			"conversationID", conversationID)
+		go func() {
+			time.Sleep(time.Second)
+			if err := c.SyncReadCursors(ctx, []string{conversationID}); err != nil {
+				log.ZWarn(ctx, "ensureReadCursorsForConversation: delayed sync failed", err,
+					"conversationID", conversationID)
+			}
+		}()
+		return nil
+	}
+	log.ZError(ctx, "ensureReadCursorsForConversation: GetConversation failed", err,
+		"conversationID", conversationID)
+	return err
+}
+
+// getExpectedMembersForReadCursor returns the list of members who should have ReadCursor data.
+// For single chat: the other party. For group chat: all members except self.
+func (c *Conversation) getExpectedMembersForReadCursor(ctx context.Context, conv *model_struct.LocalConversation) ([]string, error) {
+	switch conv.ConversationType {
+	case constant.SingleChatType:
+		return []string{conv.UserID}, nil
+
+	case constant.ReadGroupChatType:
+		members, err := c.db.GetGroupMemberListByGroupID(ctx, conv.GroupID)
+		if err != nil {
+			log.ZError(ctx, "getExpectedMembersForReadCursor: GetGroupMemberListByGroupID failed", err,
+				"groupID", conv.GroupID)
+			return nil, err
+		}
+		result := make([]string, 0, len(members))
+		for _, m := range members {
+			if m.UserID != c.loginUserID {
+				result = append(result, m.UserID)
+			}
+		}
+		return result, nil
+
+	default:
+		return nil, nil
+	}
+}
+
+// findMissingCursorMembers returns members who don't have cursor data locally.
+func (c *Conversation) findMissingCursorMembers(ctx context.Context, conversationID string, expectedMembers []string) ([]string, error) {
+	cursors, err := c.db.GetReadCursorsByConversationID(ctx, conversationID)
+	if err != nil {
+		log.ZError(ctx, "findMissingCursorMembers: GetReadCursorsByConversationID failed", err,
+			"conversationID", conversationID)
+		return nil, err
+	}
+
+	existingSet := make(map[string]struct{}, len(cursors))
+	for _, cursor := range cursors {
+		existingSet[cursor.UserID] = struct{}{}
+	}
+
+	var missing []string
+	for _, memberID := range expectedMembers {
+		if _, exists := existingSet[memberID]; !exists {
+			missing = append(missing, memberID)
+		}
+	}
+	return missing, nil
+}
+
+// cleanupReadCursorsForDeletedConversation cleans up ReadCursor and ReadState when a conversation is deleted
+func (c *Conversation) cleanupReadCursorsForDeletedConversation(ctx context.Context, conversationID string) {
+	log.ZDebug(ctx, "cleanupReadCursorsForDeletedConversation", "conversationID", conversationID)
 
 	if err := c.db.DeleteReadCursorsByConversationID(ctx, conversationID); err != nil {
 		log.ZWarn(ctx, "DeleteReadCursorsByConversationID failed", err, "conversationID", conversationID)
@@ -434,4 +534,11 @@ func (c *Conversation) handleGroupDismissedForReadCursor(ctx context.Context, ms
 	if err := c.db.DeleteReadState(ctx, conversationID); err != nil {
 		log.ZWarn(ctx, "DeleteReadState failed", err, "conversationID", conversationID)
 	}
+
+	// Clean up subscription state for this conversation.
+	// This is not strictly necessary for functionality (the callback won't fire anyway
+	// since ReadState data is deleted), but keeps the in-memory subscription map clean.
+	c.subscribedConversationsMu.Lock()
+	delete(c.subscribedConversations, conversationID)
+	c.subscribedConversationsMu.Unlock()
 }

@@ -806,6 +806,8 @@ func (c *Conversation) ClearConversationAndDeleteAllMsg(ctx context.Context, con
 }
 
 func (c *Conversation) DeleteConversationAndDeleteAllMsg(ctx context.Context, conversationID string) error {
+	// Clean up ReadCursor and ReadState when conversation is deleted
+	c.cleanupReadCursorsForDeletedConversation(ctx, conversationID)
 	return c.clearConversationFromLocalAndServer(ctx, conversationID, c.db.ResetConversation)
 }
 

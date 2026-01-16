@@ -136,6 +136,8 @@ func (c *Conversation) initSyncer() {
 			return c.db.InsertConversation(ctx, value)
 		}),
 		syncer.WithDelete[*model_struct.LocalConversation, pbConversation.GetOwnerConversationResp, string](func(ctx context.Context, value *model_struct.LocalConversation) error {
+			// Clean up ReadCursor and ReadState when conversation is deleted
+			c.cleanupReadCursorsForDeletedConversation(ctx, value.ConversationID)
 			return c.db.DeleteConversation(ctx, value.ConversationID)
 		}),
 		syncer.WithUpdate[*model_struct.LocalConversation, pbConversation.GetOwnerConversationResp, string](func(ctx context.Context, serverConversation, localConversation *model_struct.LocalConversation) error {
@@ -926,7 +928,7 @@ func (c *Conversation) getUserNameAndFaceURL(ctx context.Context, userID string)
 }
 
 // SubscribeConversationReadState 订阅会话的 ReadState 变化
-// 返回本地数据库中的当前值，无数据时返回 0
+// 返回本地数据库中的当前值，无数据或者数据不完整时会先同步再返回
 func (c *Conversation) SubscribeConversationReadState(ctx context.Context, conversationID string) (int64, error) {
 	c.subscribedConversationsMu.Lock()
 	if c.subscribedConversations == nil {
@@ -934,6 +936,11 @@ func (c *Conversation) SubscribeConversationReadState(ctx context.Context, conve
 	}
 	c.subscribedConversations[conversationID] = struct{}{}
 	c.subscribedConversationsMu.Unlock()
+
+	// 确保该会话有完整的 ReadCursor 数据（按需从服务端同步）
+	if err := c.ensureReadCursorsForConversation(ctx, conversationID); err != nil {
+		log.ZError(ctx, "ensureReadCursorsForConversation failed", err, "conversationID", conversationID)
+	}
 
 	// 查询本地数据库，无数据时返回 0
 	state, err := c.db.GetReadState(ctx, conversationID)

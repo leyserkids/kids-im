@@ -85,7 +85,14 @@ func (c *Conversation) IncrSyncConversations(ctx context.Context) error {
 		},
 	}
 
-	return conversationSyncer.IncrementalSync()
+	if err := conversationSyncer.IncrementalSync(); err != nil {
+		return err
+	}
+
+	// Sync all ReadCursors after conversation sync completes
+	// This ensures ReadCursor data is available for all conversations
+	go c.syncAllReadCursors(ctx)
+	return nil
 }
 
 func (c *Conversation) conversationTableName() string {

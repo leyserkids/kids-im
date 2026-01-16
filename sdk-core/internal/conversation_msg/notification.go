@@ -116,8 +116,6 @@ func (c *Conversation) syncFlag(c2v common.Cmd2Value) {
 	case constant.MsgSyncEnd:
 		log.ZDebug(ctx, "MsgSyncEnd", "time", time.Since(c.startTime).Milliseconds())
 		c.ConversationListener().OnSyncServerFinish(false)
-		// Sync ReadCursors for all conversations after message sync completes
-		go c.syncAllReadCursors(ctx)
 	}
 }
 
@@ -453,9 +451,6 @@ func (c *Conversation) syncData(c2v common.Cmd2Value) {
 	}
 
 	runSyncFunctions(ctx, asyncFuncs, asyncNoWait)
-
-	// Sync all ReadCursors asynchronously
-	go c.syncAllReadCursors(ctx)
 }
 
 func runSyncFunctions(ctx context.Context, funcs []func(c context.Context) error, mode int) {
