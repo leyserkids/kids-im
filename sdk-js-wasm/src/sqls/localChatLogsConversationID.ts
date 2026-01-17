@@ -611,7 +611,6 @@ export function getLatestValidServerMessage(
   isReverse: boolean
 ): QueryExecResult[] {
   _initLocalChatLogsTable(db, conversationID);
-  const order = isReverse ? 'ASC' : 'DESC';
   return db.exec(
     `
       SELECT * FROM 'chat_logs_${conversationID}' WHERE send_time ${
