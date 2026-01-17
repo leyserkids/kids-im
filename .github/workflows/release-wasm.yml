@@ -1,4 +1,4 @@
-name: Release WASM SDK
+name: Release JS WASM Package
 
 on:
   push:

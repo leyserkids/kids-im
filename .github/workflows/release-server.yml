@@ -30,22 +30,13 @@ jobs:
           VERSION=$(cat server/version/version | tr -d '\n')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build and push images
-        working-directory: server
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          ROOT_DIR="build/images"
-          for dir in "$ROOT_DIR"/*/; do
-              dockerfile=$(find "$dir" -maxdepth 1 -type f \( -iname 'dockerfile' -o -iname '*.dockerfile' \) | head -n 1)
-              if [ -n "$dockerfile" ] && [ -f "$dockerfile" ]; then
-                  IMAGE_NAME=$(basename "$dir")
-                  echo "Building $IMAGE_NAME from $dockerfile"
-
-                  docker buildx build --platform linux/amd64,linux/arm64 \
-                    --file "$dockerfile" \
-                    --tag "leyserkids/kids-im-server:$VERSION" \
-                    --tag "leyserkids/kids-im-server:latest" \
-                    --push "$dir"
-              fi
-          done
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            leyserkids/kids-im-server:${{ steps.version.outputs.version }}
+            leyserkids/kids-im-server:latest
