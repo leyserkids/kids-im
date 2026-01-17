@@ -17,7 +17,6 @@ This is a **monorepo** for `kids-im`, an open-source instant messaging platform.
 ```
 openim/
 ├── .github/workflows/    # CI/CD workflows (path-based triggers)
-├── go.work               # Go workspace for local dependencies
 ├── protocol/             # Protobuf definitions & shared types (Go)
 ├── server/               # Backend microservices (Go)
 ├── sdk-core/             # Cross-platform SDK for WASM (Go)
@@ -25,28 +24,10 @@ openim/
 └── docs/                 # Technical architecture documentation (Chinese)
 ```
 
-## Go Workspace
-
-This monorepo uses Go Workspaces (`go.work`) for local dependency resolution. The `protocol` module is automatically used by `server` and `sdk-core` without publishing.
-
-```go
-// go.work
-go 1.22.7
-
-use (
-    ./protocol
-    ./server
-    ./sdk-core
-)
-```
-
-**After any changes to protocol, no publishing is needed** - run `go work sync` and rebuild.
-
 ## Build Commands
 
 ### Full Build (from root)
 ```bash
-go work sync                          # Sync workspace dependencies
 cd protocol && ./gen.sh               # Generate protobuf code
 cd server && mage build               # Build server
 cd sdk-core && make build-wasm        # Build SDK
@@ -55,10 +36,13 @@ cd sdk-js-wasm && npm run build       # Build JS SDK
 
 ### protocol
 ```bash
+# Requires: `protoc-gen-go`, `protoc-gen-go-grpc`
+# versions:
+# - protoc-gen-go-grpc v1.6.0
+# - protoc             v5.26.0
 cd protocol
-./gen.sh      # Generate gRPC code and callers
+./gen.sh      # Generate gRPC code
 ```
-Requires: `protoc-gen-go`, `protoc-gen-go-grpc`
 
 ### server
 ```bash
@@ -89,11 +73,14 @@ npm run typecheck    # TypeScript type checking
 
 ## CI/CD (GitHub Actions)
 
-Workflows use **path-based triggers**:
-- `protocol/**` changes trigger: protocol.yml, server.yml, sdk-core.yml
-- `server/**` changes trigger: server.yml
-- `sdk-core/**` changes trigger: sdk-core.yml, sdk-js-wasm.yml
-- `sdk-js-wasm/**` changes trigger: sdk-js-wasm.yml
+The monorepo uses a unified workflow structure:
+
+- **`ci.yml`**: Unified CI workflow with change detection
+  - Uses `dorny/paths-filter` to detect which modules changed
+  - Runs protocol verification, Go builds (matrix), TypeScript builds, integration tests, Docker tests, and CodeQL
+  - Jobs run conditionally based on detected changes
+- **`release-server.yml`**: Docker image release for server components
+- **`release-wasm.yml`**: WASM SDK release workflow
 
 See `.github/workflows/` for details.
 

@@ -24,12 +24,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Get dependencies
-        run: |
-          go work sync
-          cd sdk-core && go mod download
+        run: cd sdk-core && go mod download
 
       - name: Build WASM from sdk-core
         working-directory: sdk-core
@@ -82,7 +80,7 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          BRANCH_NAME="release-${VERSION}"
+          BRANCH_NAME="release-sdk-js-wasm-${VERSION}"
           cd release-content
           git init
           git config user.name "github-actions[bot]"

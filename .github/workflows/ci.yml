@@ -1,0 +1,261 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'protocol/**'
+      - 'server/**'
+      - 'sdk-core/**'
+      - 'sdk-js-wasm/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'protocol/**'
+      - 'server/**'
+      - 'sdk-core/**'
+      - 'sdk-js-wasm/**'
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      protocol: ${{ steps.filter.outputs.protocol }}
+      server: ${{ steps.filter.outputs.server }}
+      sdk-core: ${{ steps.filter.outputs.sdk-core }}
+      sdk-js-wasm: ${{ steps.filter.outputs.sdk-js-wasm }}
+      go-modules: ${{ steps.filter.outputs.go-modules }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            protocol:
+              - 'protocol/**'
+            server:
+              - 'server/**'
+              - 'protocol/**'
+            sdk-core:
+              - 'sdk-core/**'
+              - 'protocol/**'
+            sdk-js-wasm:
+              - 'sdk-js-wasm/**'
+            go-modules:
+              - 'server/**'
+              - 'sdk-core/**'
+              - 'protocol/**'
+
+  protocol-check:
+    name: Protocol - Verify Generated Code
+    needs: detect-changes
+    if: needs.detect-changes.outputs.protocol == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Install protoc tools
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.35.1
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0
+
+      - name: Verify generated code is up to date
+        working-directory: protocol
+        run: |
+          ./gen.sh
+          git diff --exit-code || (echo "Generated files are out of date. Run './gen.sh' in protocol/" && exit 1)
+
+  go-build:
+    name: Go Build - ${{ matrix.module }} (Go ${{ matrix.go_version }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.go-modules == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go_version: ["1.21.x", "1.22.x"]
+        module: [server, sdk-core]
+        exclude:
+          - module: server
+            go_version: "1.21.x"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go_version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go_version }}
+
+      - name: Install mage
+        if: matrix.module == 'server'
+        run: go install github.com/magefile/mage@latest
+
+      - name: Get dependencies
+        run: cd ${{ matrix.module }} && go mod download
+
+      - name: Build server
+        if: matrix.module == 'server'
+        working-directory: server
+        run: mage build
+
+      - name: Build sdk-core
+        if: matrix.module == 'sdk-core'
+        working-directory: sdk-core
+        run: |
+          go mod tidy
+          go generate ./...
+
+      - name: Build WASM
+        if: matrix.module == 'sdk-core'
+        working-directory: sdk-core/wasm/cmd
+        run: |
+          mkdir -p ../../_output/bin
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags "-s -w" -o ../../_output/bin/kids-im.wasm main.go
+
+  sdk-js-wasm-build:
+    name: SDK JS WASM - TypeScript Build
+    needs: detect-changes
+    if: needs.detect-changes.outputs.sdk-js-wasm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        working-directory: sdk-js-wasm
+        run: npm install
+
+      - name: Type check
+        working-directory: sdk-js-wasm
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: sdk-js-wasm
+        run: npm run lint
+
+      - name: Build
+        working-directory: sdk-js-wasm
+        run: npm run build
+
+      # - name: Test
+      #   working-directory: sdk-js-wasm
+      #   run: npm test
+
+  integration-test:
+    name: Integration Test
+    needs: [detect-changes, go-build]
+    if: |
+      always() &&
+      (needs.detect-changes.outputs.server == 'true' || needs.detect-changes.outputs.sdk-core == 'true') &&
+      (needs.go-build.result == 'success' || needs.go-build.result == 'skipped')
+    runs-on: ubuntu-latest
+    env:
+      CONFIG_PATH: server/config/notification.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Install tools
+        run: |
+          go install github.com/magefile/mage@latest
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.1/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Get dependencies
+        run: |
+          cd server && go mod download
+          cd ../sdk-core && go mod download
+
+      - name: Modify Server Configuration
+        run: |
+          yq e '.groupCreated.unreadCount = true' -i ${{ env.CONFIG_PATH }}
+          yq e '.friendApplicationApproved.unreadCount = true' -i ${{ env.CONFIG_PATH }}
+          yq e '.beforeOnlinePush.enable = false' -i server/config/webhooks.yml
+          yq e '.beforeGroupOnlinePush.enable = false' -i server/config/webhooks.yml
+
+      - name: Set up infra services
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "./server/docker-compose.ci.yml"
+
+      - name: Start Server
+        working-directory: server
+        run: |
+          mage build
+          mage start
+          mage check
+
+      - name: Run SDK Integration Tests
+        working-directory: sdk-core
+        run: |
+          go mod tidy
+          cd integration_test
+          mkdir -p data
+          go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 20 -su 5 -lg 2 -cg 2 -cgm 3 -sm 10 -gm 10 -reg
+
+  docker-test:
+    name: Docker Build Test
+    needs: [detect-changes, go-build]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.server == 'true' &&
+      (needs.go-build.result == 'success' || needs.go-build.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Build Docker Image
+        working-directory: server
+        run: |
+          IMAGE_NAME="kids-im-server-test"
+          docker build -t $IMAGE_NAME .
+
+      - name: Run Container
+        run: |
+          docker run --name kids-im-server-container -d kids-im-server-test
+          sleep 5
+          docker logs kids-im-server-container
+
+  codeql:
+    name: CodeQL Analysis
+    needs: detect-changes
+    if: needs.detect-changes.outputs.go-modules == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: go
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
