@@ -304,14 +304,14 @@ export function searchMessageByKeyword(
       subCondition += 'And (';
     }
     if (index + 1 >= keywordList.length) {
-      subCondition += 'content like ' + "'%" + keywordList[index] + "%') ";
+      subCondition += 'content like ' + "'%" + keyword + "%') ";
     } else {
       subCondition +=
-        'content like ' + "'%" + keywordList[index] + "%' " + connectStr;
+        'content like ' + "'%" + keyword + "%' " + connectStr;
     }
   });
   return db.exec(
-    `  
+    `
     SELECT * FROM 'chat_logs_${conversationID}' 
           WHERE send_time  between ${startTime} and ${finalEndTime} 
           AND status <=3  
@@ -362,14 +362,14 @@ export function searchMessageByContentTypeAndKeyword(
       subCondition += 'And (';
     }
     if (index + 1 >= keywordList.length) {
-      subCondition += 'content like ' + "'%" + keywordList[index] + "%') ";
+      subCondition += 'content like ' + "'%" + keyword + "%') ";
     } else {
       subCondition +=
-        'content like ' + "'%" + keywordList[index] + "%' " + connectStr;
+        'content like ' + "'%" + keyword + "%' " + connectStr;
     }
   });
   return db.exec(
-    `  
+    `
       SELECT * FROM 'chat_logs_${conversationID}' 
             WHERE send_time between ${startTime} and ${finalEndTime} 
             AND status <=3 
