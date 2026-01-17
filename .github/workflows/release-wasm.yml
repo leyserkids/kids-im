@@ -63,8 +63,7 @@ jobs:
           cp -r sdk-js-wasm/lib release-content/
           cp -r sdk-js-wasm/assets release-content/
           cp sdk-js-wasm/package.json release-content/
-          cp sdk-js-wasm/LICENSE release-content/ || true
-          cp sdk-js-wasm/README.md release-content/
+          cp sdk-js-wasm/LICENSE release-content/
 
       - name: Check if release exists
         id: check_release
