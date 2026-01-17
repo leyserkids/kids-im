@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - 'protocol/**'
       - 'server/**'
   workflow_dispatch:
 
