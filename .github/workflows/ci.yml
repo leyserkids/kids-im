@@ -224,9 +224,11 @@ jobs:
           go-version: '1.22.x'
 
       - name: Build Docker Image
-        working-directory: server
         run: |
           IMAGE_NAME="kids-im-server-test"
+          # Copy protocol to server directory for Docker build context
+          cp -r protocol server/protocol
+          cd server
           docker build -t $IMAGE_NAME .
 
       - name: Run Container

@@ -13,6 +13,9 @@ WORKDIR $SERVER_DIR
 # Copy all files from the current directory into the container
 COPY . .
 
+# Copy protocol to /protocol for go.mod replace directive
+RUN if [ -d "protocol" ]; then cp -r protocol /protocol; fi
+
 RUN go mod download
 
 # Install Mage to use for building the application
