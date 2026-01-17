@@ -28,7 +28,7 @@
     "type": "git",
     "url": "git+https://github.com/leyserkids/openim-sdk-js-wasm.git"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": {
     "name": "blooming",
     "email": "blooming2477@gmail.com",
