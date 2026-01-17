@@ -89,5 +89,5 @@ jobs:
           git commit -m "Release v${VERSION}"
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push origin ${BRANCH_NAME}
-          git tag "sdk-js-wasm/v${VERSION}"
-          git push origin "sdk-js-wasm/v${VERSION}"
+          git tag "js-wasm-v${VERSION}"
+          git push origin "js-wasm-v${VERSION}"
