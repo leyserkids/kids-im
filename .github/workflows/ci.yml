@@ -151,10 +151,6 @@ jobs:
         working-directory: sdk-js-wasm
         run: npm run build
 
-      # - name: Test
-      #   working-directory: sdk-js-wasm
-      #   run: npm test
-
   integration-test:
     name: Integration Test
     needs: [detect-changes, go-build]
