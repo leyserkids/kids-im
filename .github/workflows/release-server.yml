@@ -30,6 +30,9 @@ jobs:
           VERSION=$(cat server/version/version | tr -d '\n')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Copy protocol to server for build context
+        run: cp -r protocol server/protocol
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:

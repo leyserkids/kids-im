@@ -45,6 +45,7 @@ COPY --from=builder $SERVER_DIR/magefile.go $SERVER_DIR/
 COPY --from=builder $SERVER_DIR/start-config.yml $SERVER_DIR/
 COPY --from=builder $SERVER_DIR/go.mod $SERVER_DIR/
 COPY --from=builder $SERVER_DIR/go.sum $SERVER_DIR/
+COPY --from=builder /protocol /protocol
 
 RUN go get github.com/openimsdk/gomake@v0.0.14-alpha.5
 
