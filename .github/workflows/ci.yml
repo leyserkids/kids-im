@@ -78,24 +78,20 @@ jobs:
           git diff --exit-code || (echo "Generated files are out of date. Run './gen.sh' in protocol/" && exit 1)
 
   go-build:
-    name: Go Build - ${{ matrix.module }} (Go ${{ matrix.go_version }})
+    name: Go Build - ${{ matrix.module }}
     needs: detect-changes
     if: needs.detect-changes.outputs.go-modules == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go_version: ["1.21.x", "1.22.x"]
         module: [server, sdk-core]
-        exclude:
-          - module: server
-            go_version: "1.21.x"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Go ${{ matrix.go_version }}
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go_version }}
+          go-version: '1.22.x'
           cache-dependency-path: ${{ matrix.module }}/go.sum
 
       - name: Install mage
