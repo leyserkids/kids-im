@@ -1,11 +1,11 @@
-> ## 说明
+> ## Note
 >
-> Fork 自 [openimsdk/protocol](https://github.com/openimsdk/protocol)
+> Forked from [openimsdk/protocol](https://github.com/openimsdk/protocol)
 >
-> 基于版本：`v0.0.72-alpha.78`
+> Based on version: `v0.0.72-alpha.78`
 >
-> ### 修改记录
-> - 支持群已读，并统一单聊已读和群已读的实现方式
+> ### Changelog
+> - Support group read receipts, unifying the implementation of single chat and group chat read receipts
 
 ---
 
