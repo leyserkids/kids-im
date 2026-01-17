@@ -79,7 +79,7 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          BRANCH_NAME="release-sdk-js-wasm-${VERSION}"
+          BRANCH_NAME="release-js-wasm-${VERSION}"
           cd release-content
           git init
           git config user.name "github-actions[bot]"
@@ -89,5 +89,3 @@ jobs:
           git commit -m "Release v${VERSION}"
           git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push origin ${BRANCH_NAME}
-          git tag "js-wasm-v${VERSION}"
-          git push origin "js-wasm-v${VERSION}"
