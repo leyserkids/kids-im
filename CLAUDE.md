@@ -6,70 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **monorepo** for `kids-im`, an open-source instant messaging platform. It's a fork of the upstream OpenIM project with custom enhancements for **unified group/single chat read receipts** and more.
 
-**Base Versions:**
-- openim-protocol: v0.0.72-alpha.78
-- openim-sdk-core: v3.8.3-patch.3
-- openim-sdk-js-wasm: v3.8.3-patch.3
-- openim-server: v3.8.3-patch.3
-
-## Repository Structure
-
-```
-openim/
-├── .github/workflows/    # CI/CD workflows (path-based triggers)
-├── protocol/             # Protobuf definitions & shared types (Go)
-├── server/               # Backend microservices (Go)
-├── sdk-core/             # Cross-platform SDK for WASM (Go)
-├── sdk-js-wasm/          # TypeScript/JavaScript WebAssembly wrapper
-└── docs/                 # Technical architecture documentation (Chinese)
-```
-
-## Build Commands
-
-### Full Build (from root)
-```bash
-cd protocol && ./gen.sh               # Generate protobuf code
-cd server && mage build               # Build server
-cd sdk-core && make build-wasm        # Build SDK
-cd sdk-js-wasm && npm run build       # Build JS SDK
-```
-
-### protocol
-```bash
-# Requires: `protoc-gen-go`, `protoc-gen-go-grpc`
-# versions:
-# - protoc-gen-go-grpc v1.6.0
-# - protoc             v5.26.0
-cd protocol
-./gen.sh      # Generate gRPC code
-```
-
-### server
-```bash
-cd server
-mage build     # Build all binaries to _output/bin/
-mage start     # Start all services (requires docker-compose dependencies)
-mage stop      # Stop all services
-mage check     # Check service status
-go test ./...  # Run tests
-```
-
-### sdk-core
-```bash
-cd sdk-core
-make build-wasm      # Build WebAssembly module
-make test            # Run unit tests
-make lint            # Run golangci-lint
-```
-
-### sdk-js-wasm
-```bash
-cd sdk-js-wasm
-npm install
-npm run build        # Compile TS + bundle, outputs to lib/
-npm run lint         # ESLint with fixes
-npm run typecheck    # TypeScript type checking
-```
+For base versions, repository structure, build commands, and architecture overview, see [README.md](README.md).
 
 ## CI/CD (GitHub Actions)
 
@@ -84,39 +21,8 @@ The monorepo uses a unified workflow structure:
 
 See `.github/workflows/` for details.
 
-## Architecture
+## Key Microservices (server/cmd/)
 
-```
-┌────────────────────────────────────────┐
-│     Client Applications (SDK users)     │
-└────────────────┬───────────────────────┘
-                 │
-┌────────────────▼───────────────────────┐
-│     sdk-core / sdk-js-wasm             │
-│  (WebSocket, local SQLite, encryption) │
-└────────────────┬───────────────────────┘
-                 │
-┌────────────────▼───────────────────────┐
-│          API Gateway (Gin)              │
-│  REST: /user, /message, /group          │
-│  WebSocket: /gateway (msggateway)       │
-└────────────────┬───────────────────────┘
-                 │ gRPC
-┌────────────────▼───────────────────────┐
-│           RPC Services                  │
-│  msg | user | group | auth | relation   │
-│  conversation | third | push            │
-└────────────────┬───────────────────────┘
-                 │
-    ┌────────────┼────────────┐
-    ▼            ▼            ▼
-┌────────┐  ┌─────────┐  ┌────────┐
-│ Redis  │  │ MongoDB │  │ Kafka  │
-│(cache) │  │(persist)│  │(queue) │
-└────────┘  └─────────┘  └────────┘
-```
-
-### Key Microservices (server/cmd/)
 - **openim-api**: REST API gateway
 - **openim-msggateway**: WebSocket connections for real-time messaging
 - **openim-msgtransfer**: Kafka-based message routing
@@ -129,17 +35,8 @@ See `.github/workflows/` for details.
 ### Message Ordering (Seq)
 Messages use a `Seq` (sequence number) for ordering and sync. Each conversation has its own Seq counter. Clients sync incrementally by requesting messages since their last known Seq.
 
-### Read Receipts (This Fork's Enhancement)
-This fork unifies single chat and group chat read receipt handling:
-- **LocalReadCursor**: Stores each member's read position (max_read_seq) per conversation
-- **LocalReadState**: Stores `allReadSeq` - the minimum read position among other members
-- **Notification types**: `MarkAsReadTips` (2200) for self-sync, `GroupHasReadTips` (2201) for group broadcast
-
-Key files for read receipt logic:
-- `sdk-core/internal/conversation_msg/read_drawing.go`
-- `sdk-core/internal/conversation_msg/sync.go`
-- `server/internal/rpc/msg/as_read.go`
-- `protocol/sdkws/sdkws.proto` (GroupHasReadTips)
+### Read Receipts
+Unified single chat and group chat read receipt handling via `ReadCursor` (per-member read position) and `allReadSeq` (minimum read position among other members).
 
 ### Storage
 - **Server**: MongoDB (messages by conversation, ~100 msgs/document), Redis (cache/tokens), Kafka (message queue)
@@ -152,10 +49,10 @@ Server config files in `server/config/*.yml`:
 - `mongodb.yml`, `redis.yml`, `kafka.yml`: Data layer connections
 - `openim-api.yml`, `openim-msggateway.yml`, etc.: Per-service settings
 
+## Related Projects
+
+- **Frontend**: The IM frontend repository path can be obtained via the environment variable `PROJECT_PATH_KIDS_IM_FRONTEND`
+
 ## Technical Documentation
 
-The `docs/` directory contains detailed design docs (in Chinese):
-- `01-database-design.md`: MongoDB sharding, Seq mechanism
-- `02-seq-design.md`: Message ordering via Seq numbers
-- `04-message-order-dedup.md`: 5-layer ordering, 4-layer deduplication
-- `09-read-receipt.md`: **Key doc for this fork's read receipt design**
+The `docs/` directory contains detailed design docs (in Chinese). See [docs/README.md](docs/README.md) for the full index and recommended reading order.

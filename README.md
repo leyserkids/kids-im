@@ -35,6 +35,15 @@ kids-im/
 └── docs/             # 技术架构文档
 ```
 
+## 环境要求
+
+**Go 版本：**
+- go 1.22.7+
+
+**Protocol 构建依赖：**
+- protoc v5.26.0
+- protoc-gen-go-grpc v1.6.0
+
 ## 快速开始
 
 ### 构建 Protocol
