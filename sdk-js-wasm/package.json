@@ -22,7 +22,10 @@
   "scripts": {
     "build": "rimraf lib && rollup -c && tsc-alias",
     "lint": "eslint ./src/ --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sync": "node scripts/sync-to-frontend.mjs --all",
+    "sync:wasm": "node scripts/sync-to-frontend.mjs --wasm",
+    "sync:js": "node scripts/sync-to-frontend.mjs --js"
   },
   "repository": {
     "type": "git",
