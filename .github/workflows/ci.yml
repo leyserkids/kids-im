@@ -3,7 +3,8 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - dev
+      - RA
     paths:
       - 'protocol/**'
       - 'server/**'
@@ -12,7 +13,8 @@ on:
       - '.github/workflows/ci.yml'
   pull_request:
     branches:
-      - main
+      - dev
+      - RA
     paths:
       - 'protocol/**'
       - 'server/**'

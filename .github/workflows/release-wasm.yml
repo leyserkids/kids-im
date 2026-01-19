@@ -3,7 +3,8 @@ name: Release JS WASM Package
 on:
   push:
     branches:
-      - main
+      - dev
+      - RA
     paths:
       - 'sdk-core/version/version'
   workflow_dispatch:

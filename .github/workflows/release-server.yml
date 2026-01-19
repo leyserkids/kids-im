@@ -3,7 +3,8 @@ name: Release Server Docker Images
 on:
   push:
     branches:
-      - main
+      - dev
+      - RA
     paths:
       - 'protocol/**'
       - 'server/**'
