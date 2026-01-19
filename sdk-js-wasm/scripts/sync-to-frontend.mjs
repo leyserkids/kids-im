@@ -10,7 +10,7 @@
  *   npm run sync -- --all  # 全部编译后复制
  *
  * 环境变量:
- *   PROJECT_PATH_KIDS_IM_FRONTEND - 前端项目路径（必需）
+ *   PROJECT_PATH_FUJI_FRONTEND - 前端项目路径（必需）
  */
 
 import { spawn } from 'node:child_process';
@@ -29,7 +29,7 @@ const SDK_JS_WASM_DIR = path.resolve(ROOT_DIR, 'sdk-js-wasm');
 const SDK_CORE_DIR = path.resolve(ROOT_DIR, 'sdk-core');
 
 const TARGET_PACKAGE = '@openim/wasm-client-sdk';
-const ENV_VAR_NAME = 'PROJECT_PATH_KIDS_IM_FRONTEND';
+const ENV_VAR_NAME = 'PROJECT_PATH_FUJI_FRONTEND';
 
 // 源文件路径
 const PATHS = {
@@ -244,7 +244,7 @@ function validatePaths(frontendPath) {
     process.exit(1);
   }
 
-  const targetDir = path.join(resolved, '../..', 'node_modules', TARGET_PACKAGE);
+  const targetDir = path.join(resolved, 'node_modules', TARGET_PACKAGE);
   if (!fs.existsSync(targetDir)) {
     log.error(`目标包不存在: ${targetDir}`);
     console.log(colors.gray(`  请确保前端项目已安装 ${TARGET_PACKAGE}\n`));

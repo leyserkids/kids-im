@@ -51,7 +51,7 @@ Server config files in `server/config/*.yml`:
 
 ## Related Projects
 
-- **Frontend**: The IM frontend repository path can be obtained via the environment variable `PROJECT_PATH_KIDS_IM_FRONTEND`
+- **Frontend**: The IM frontend repository path can be obtained via the environment variable `PROJECT_PATH_FUJI_FRONTEND`. The IM module is located at `apps/fuji-im` within that repository.
 
 ## Technical Documentation
 
