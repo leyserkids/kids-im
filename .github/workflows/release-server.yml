@@ -9,6 +9,15 @@ on:
       - 'protocol/**'
       - 'server/**'
   workflow_dispatch:
+    inputs:
+      bump_version:
+        description: 'Bump version number (e.g., v3.8.3-kids.0 -> v3.8.3-kids.1)'
+        type: boolean
+        default: false
+      image_tag:
+        description: 'Docker image tag (e.g., 202511, default: current default branch name)'
+        type: string
+        required: false
 
 jobs:
   build-and-push:
@@ -16,6 +25,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ inputs.bump_version && secrets.DEPLOY_KEY || '' }}
+
+      - name: Bump version
+        if: inputs.bump_version
+        run: |
+          VERSION=$(cat server/version/version | tr -d '\n')
+          # Extract the number after 'kids.' and increment it
+          PREFIX=$(echo "$VERSION" | sed 's/\(.*kids\.\)[0-9]*/\1/')
+          NUM=$(echo "$VERSION" | sed 's/.*kids\.//')
+          NEW_NUM=$((NUM + 1))
+          NEW_VERSION="${PREFIX}${NEW_NUM}"
+          echo "$NEW_VERSION" > server/version/version
+          echo "Bumped version: $VERSION -> $NEW_VERSION"
+
+      - name: Commit version bump
+        if: inputs.bump_version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add server/version/version
+          git commit -m "chore: bump server version"
+          git push
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -25,12 +57,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Read version from file
-        id: version
-        run: |
-          VERSION=$(cat server/version/version | tr -d '\n')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Copy protocol to server for build context
         run: cp -r protocol server/protocol
@@ -43,5 +69,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            leyserkids/kids-im-server:${{ steps.version.outputs.version }}
+            leyserkids/kids-im-server:${{ inputs.image_tag || github.ref_name }}
             leyserkids/kids-im-server:latest
