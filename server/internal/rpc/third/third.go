@@ -30,6 +30,7 @@ import (
 	"github.com/openimsdk/tools/db/redisutil"
 	"github.com/openimsdk/tools/discovery"
 	"github.com/openimsdk/tools/s3"
+	"github.com/openimsdk/tools/s3/aws"
 	"github.com/openimsdk/tools/s3/cos"
 	"github.com/openimsdk/tools/s3/kodo"
 	"github.com/openimsdk/tools/s3/minio"
@@ -90,6 +91,8 @@ func Start(ctx context.Context, config *Config, client discovery.SvcDiscoveryReg
 		o, err = oss.NewOSS(*config.RpcConfig.Object.Oss.Build())
 	case "kodo":
 		o, err = kodo.NewKodo(*config.RpcConfig.Object.Kodo.Build())
+	case "aws":
+		o, err = aws.NewAWS(*config.RpcConfig.Object.Aws.Build())
 	default:
 		err = fmt.Errorf("invalid object enable: %s", enable)
 	}
