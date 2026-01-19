@@ -48,24 +48,39 @@ kids-im/
 
 ### 构建 Protocol
 ```bash
-cd protocol && ./gen.sh
-```
-
-### 构建 Server
-```bash
-cd server && mage build
+cd protocol
+# 安装整理依赖
+go mod tidy
+# 生成 proto 生成 go 文件
+./gen.sh
 ```
 
 ### 构建 SDK
 ```bash
+# 开发时，使用下面的命令会自动构建 wasm + js lib 并复制到前端 node_modules 下
+# 注意要先配置环境变量 PROJECT_PATH_FUJI_FRONTEND
+cd sdk-js-wasm
+npm install    # 安装依赖
+npm run sync
+
+# ==== 下面用于测试构建 ====
+# 构建 wasm
 cd sdk-core && make build-wasm
-cd sdk-js-wasm && npm install && npm run build
+
+# 构建 js-lib
+cd sdk-js-wasm
+npm run build
 ```
 
-### 运行 Server
+### 构建/运行 Server
 ```bash
 cd server
-mage start    # 启动所有服务（需要 docker-compose 依赖）
+# 安装整理依赖
+go mod tidy
+# 构建
+mage build
+# 运行
+mage start    # 启动所有服务
 mage stop     # 停止所有服务
 mage check    # 检查服务状态
 ```
@@ -74,7 +89,7 @@ mage check    # 检查服务状态
 
 ```
 ┌────────────────────────────────────────┐
-│     Client Applications (SDK users)     │
+│     Client Applications (SDK users)    │
 └────────────────┬───────────────────────┘
                  │
 ┌────────────────▼───────────────────────┐
@@ -83,15 +98,15 @@ mage check    # 检查服务状态
 └────────────────┬───────────────────────┘
                  │
 ┌────────────────▼───────────────────────┐
-│          API Gateway (Gin)              │
-│  REST: /user, /message, /group          │
-│  WebSocket: /gateway (msggateway)       │
+│          API Gateway (Gin)             │
+│  REST: /user, /message, /group         │
+│  WebSocket: /gateway (msggateway)      │
 └────────────────┬───────────────────────┘
                  │ gRPC
 ┌────────────────▼───────────────────────┐
-│           RPC Services                  │
-│  msg | user | group | auth | relation   │
-│  conversation | third | push            │
+│           RPC Services                 │
+│  msg | user | group | auth | relation  │
+│  conversation | third | push           │
 └────────────────┬───────────────────────┘
                  │
     ┌────────────┼────────────┐
