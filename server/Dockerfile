@@ -10,18 +10,22 @@ WORKDIR $SERVER_DIR
 # Set the Go proxy to improve dependency resolution speed
 # ENV GOPROXY=https://goproxy.io,direct
 
-# Copy all files from the current directory into the container
-COPY . .
+# 1. Copy dependency files first (this layer changes rarely, high cache hit rate)
+COPY go.mod go.sum ./
 
-# Copy protocol to /protocol for go.mod replace directive
-RUN if [ -d "protocol" ]; then cp -r protocol /protocol; fi
+# 2. Copy protocol directory (required for go.mod replace directive)
+COPY protocol /protocol
 
+# 3. Download dependencies (cached as long as go.mod/go.sum unchanged)
 RUN go mod download
 
-# Install Mage to use for building the application
+# 4. Install Mage (fixed version, will be cached)
 RUN go install github.com/magefile/mage@v1.15.0
 
-# Optionally build your application if needed
+# 5. Copy source code last (changes most frequently)
+COPY . .
+
+# 6. Build the application
 RUN mage build
 
 # Using Alpine Linux with Go environment for the final image
