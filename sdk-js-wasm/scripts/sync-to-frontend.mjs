@@ -10,7 +10,7 @@
  *   npm run sync -- --all  # 全部编译后复制
  *
  * 环境变量:
- *   PROJECT_PATH_KIDS_IM_FRONTEND - 前端项目路径（必需）
+ *   PROJECT_PATH_FUJI_FRONTEND - 前端项目路径（必需）
  */
 
 import { spawn } from 'node:child_process';
@@ -29,7 +29,7 @@ const SDK_JS_WASM_DIR = path.resolve(ROOT_DIR, 'sdk-js-wasm');
 const SDK_CORE_DIR = path.resolve(ROOT_DIR, 'sdk-core');
 
 const TARGET_PACKAGE = '@openim/wasm-client-sdk';
-const ENV_VAR_NAME = 'PROJECT_PATH_KIDS_IM_FRONTEND';
+const ENV_VAR_NAME = 'PROJECT_PATH_FUJI_FRONTEND';
 
 // 源文件路径
 const PATHS = {
@@ -114,7 +114,10 @@ async function buildWasm() {
   const ldflags = '-s -w';
   log.cmd(`GOOS=js GOARCH=wasm go build -trimpath -ldflags "${ldflags}" -o _output/bin/openIM.wasm wasm/cmd/main.go`);
 
-  await exec('go', ['build', '-trimpath', '-ldflags', ldflags, '-o', '_output/bin/openIM.wasm', 'wasm/cmd/main.go'], {
+  // Windows shell 模式下需要用引号包裹带空格的参数值
+  const ldflagsArg = process.platform === 'win32' ? `"${ldflags}"` : ldflags;
+
+  await exec('go', ['build', '-trimpath', '-ldflags', ldflagsArg, '-o', '_output/bin/openIM.wasm', 'wasm/cmd/main.go'], {
     cwd: SDK_CORE_DIR,
     env: { ...process.env, GOOS: 'js', GOARCH: 'wasm' },
   });
@@ -244,7 +247,7 @@ function validatePaths(frontendPath) {
     process.exit(1);
   }
 
-  const targetDir = path.join(resolved, '../..', 'node_modules', TARGET_PACKAGE);
+  const targetDir = path.join(resolved, 'node_modules', TARGET_PACKAGE);
   if (!fs.existsSync(targetDir)) {
     log.error(`目标包不存在: ${targetDir}`);
     console.log(colors.gray(`  请确保前端项目已安装 ${TARGET_PACKAGE}\n`));
