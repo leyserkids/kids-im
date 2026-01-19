@@ -114,7 +114,10 @@ async function buildWasm() {
   const ldflags = '-s -w';
   log.cmd(`GOOS=js GOARCH=wasm go build -trimpath -ldflags "${ldflags}" -o _output/bin/openIM.wasm wasm/cmd/main.go`);
 
-  await exec('go', ['build', '-trimpath', '-ldflags', ldflags, '-o', '_output/bin/openIM.wasm', 'wasm/cmd/main.go'], {
+  // Windows shell 模式下需要用引号包裹带空格的参数值
+  const ldflagsArg = process.platform === 'win32' ? `"${ldflags}"` : ldflags;
+
+  await exec('go', ['build', '-trimpath', '-ldflags', ldflagsArg, '-o', '_output/bin/openIM.wasm', 'wasm/cmd/main.go'], {
     cwd: SDK_CORE_DIR,
     env: { ...process.env, GOOS: 'js', GOARCH: 'wasm' },
   });
