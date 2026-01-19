@@ -1,0 +1,4 @@
+# Auto detect text files and perform LF normalization
+# Source code
+*.go text eol=lf
+*.proto text eol=lf
