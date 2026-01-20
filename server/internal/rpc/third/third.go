@@ -92,7 +92,7 @@ func Start(ctx context.Context, config *Config, client discovery.SvcDiscoveryReg
 	case "kodo":
 		o, err = kodo.NewKodo(*config.RpcConfig.Object.Kodo.Build())
 	case "aws":
-		o, err = aws.NewAWS(*config.RpcConfig.Object.Aws.Build())
+		o, err = aws.NewAws(*config.RpcConfig.Object.Aws.Build())
 	default:
 		err = fmt.Errorf("invalid object enable: %s", enable)
 	}

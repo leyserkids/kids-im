@@ -31,7 +31,6 @@ import (
 	"github.com/openimsdk/tools/db/redisutil"
 	"github.com/openimsdk/tools/discovery/etcd"
 	"github.com/openimsdk/tools/discovery/zookeeper"
-	"github.com/openimsdk/tools/s3/aws"
 	"github.com/openimsdk/tools/s3/minio"
 	"github.com/openimsdk/tools/system/program"
 )
@@ -66,21 +65,16 @@ func CheckMinIO(ctx context.Context, config *config.Minio) error {
 	return minio.Check(ctx, config.Build())
 }
 
-func CheckAWS(ctx context.Context, config *config.Aws) error {
-	return aws.Check(ctx, config.Build())
-}
-
 func CheckKafka(ctx context.Context, conf *config.Kafka) error {
 	return kafka.CheckHealth(ctx, conf.Build())
 }
 
-func initConfig(configDir string) (*config.Mongo, *config.Redis, *config.Kafka, *config.Minio, *config.Aws, *config.Discovery, error) {
+func initConfig(configDir string) (*config.Mongo, *config.Redis, *config.Kafka, *config.Minio, *config.Discovery, error) {
 	var (
 		mongoConfig = &config.Mongo{}
 		redisConfig = &config.Redis{}
 		kafkaConfig = &config.Kafka{}
 		minioConfig = &config.Minio{}
-		awsConfig   = &config.Aws{}
 		discovery   = &config.Discovery{}
 		thirdConfig = &config.Third{}
 	)
@@ -101,25 +95,22 @@ func initConfig(configDir string) (*config.Mongo, *config.Redis, *config.Kafka, 
 
 	err = config.LoadConfig(filepath.Join(configDir, cmd.OpenIMRPCThirdCfgFileName), cmd.ConfigEnvPrefixMap[cmd.OpenIMRPCThirdCfgFileName], thirdConfig)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	if thirdConfig.Object.Enable == "minio" {
 		err = config.LoadConfig(filepath.Join(configDir, cmd.MinioConfigFileName), cmd.ConfigEnvPrefixMap[cmd.MinioConfigFileName], minioConfig)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, err
 		}
-	} else if thirdConfig.Object.Enable == "aws" {
-		awsConfig = &thirdConfig.Object.Aws
 	} else {
 		minioConfig = nil
-		awsConfig = nil
 	}
 	err = config.LoadConfig(filepath.Join(configDir, cmd.DiscoveryConfigFilename), cmd.ConfigEnvPrefixMap[cmd.DiscoveryConfigFilename], discovery)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
-	return mongoConfig, redisConfig, kafkaConfig, minioConfig, awsConfig, discovery, nil
+	return mongoConfig, redisConfig, kafkaConfig, minioConfig, discovery, nil
 }
 
 func main() {
@@ -132,13 +123,13 @@ func main() {
 
 	fmt.Printf("%s Index: %d, Config Path: %s\n", filepath.Base(os.Args[0]), index, configDir)
 
-	mongoConfig, redisConfig, kafkaConfig, minioConfig, awsConfig, zookeeperConfig, err := initConfig(configDir)
+	mongoConfig, redisConfig, kafkaConfig, minioConfig, zookeeperConfig, err := initConfig(configDir)
 	if err != nil {
 		program.ExitWithError(err)
 	}
 
 	ctx := context.Background()
-	err = performChecks(ctx, mongoConfig, redisConfig, kafkaConfig, minioConfig, awsConfig, zookeeperConfig, maxRetry)
+	err = performChecks(ctx, mongoConfig, redisConfig, kafkaConfig, minioConfig, zookeeperConfig, maxRetry)
 	if err != nil {
 		// Assume program.ExitWithError logs the error and exits.
 		// Replace with your error handling logic as necessary.
@@ -146,7 +137,7 @@ func main() {
 	}
 }
 
-func performChecks(ctx context.Context, mongoConfig *config.Mongo, redisConfig *config.Redis, kafkaConfig *config.Kafka, minioConfig *config.Minio, awsConfig *config.Aws, discovery *config.Discovery, maxRetry int) error {
+func performChecks(ctx context.Context, mongoConfig *config.Mongo, redisConfig *config.Redis, kafkaConfig *config.Kafka, minioConfig *config.Minio, discovery *config.Discovery, maxRetry int) error {
 	checksDone := make(map[string]bool)
 
 	checks := map[string]func(ctx context.Context) error{
@@ -163,11 +154,6 @@ func performChecks(ctx context.Context, mongoConfig *config.Mongo, redisConfig *
 	if minioConfig != nil {
 		checks["MinIO"] = func(ctx context.Context) error {
 			return CheckMinIO(ctx, minioConfig)
-		}
-	}
-	if awsConfig != nil {
-		checks["AWS"] = func(ctx context.Context) error {
-			return CheckAWS(ctx, awsConfig)
 		}
 	}
 	if discovery.Enable == "etcd" {
