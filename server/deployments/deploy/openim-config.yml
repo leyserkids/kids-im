@@ -377,9 +377,9 @@ data:
 
     imAdminUserID: ["imAdmin"]
 
-    # 1: For Android, iOS, Windows, Mac, and web platforms, only one instance can be online at a time
+    # 0: No kick, but limit max number per platform (DefalutNotKick)
     multiLogin:
-      policy: 1
+      policy: 0
       maxNumOneEnd: 30
 
   kafka.yml: |

@@ -356,8 +356,8 @@ share:
     - "admin_001"
     - "admin_002"
   multiLogin:
-    policy: 1  # AllLoginButSameTermKick
-    maxNumOneEnd: 3
+    policy: 0  # DefalutNotKick
+    maxNumOneEnd: 30
 ```
 
 ---
