@@ -6,7 +6,9 @@ on:
       - dev
       - RA
     paths:
-      - 'sdk-core/version/version'
+      - 'sdk-core/**'
+      - 'sdk-js-wasm/**'
+      - 'protocol/**'
   workflow_dispatch:
 
 jobs:
@@ -15,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -26,6 +30,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Bump version
+        run: |
+          VERSION=$(cat sdk-core/version/version | tr -d '\r\n')
+          PREFIX=$(echo "$VERSION" | sed 's/\(.*kids\.\)[0-9]*/\1/')
+          NUM=$(echo "$VERSION" | sed 's/.*kids\.//')
+          NEW_NUM=$((NUM + 1))
+          NEW_VERSION="${PREFIX}${NEW_NUM}"
+          echo "$NEW_VERSION" > sdk-core/version/version
+          echo "Bumped version: $VERSION -> $NEW_VERSION"
 
       - name: Get dependencies
         run: cd sdk-core && go mod download
@@ -51,6 +65,14 @@ jobs:
       - name: Update package.json version
         working-directory: sdk-js-wasm
         run: npm version ${{ steps.get_version.outputs.version }} --no-git-tag-version --allow-same-version
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sdk-core/version/version sdk-js-wasm/package.json
+          git diff --staged --quiet || git commit -m "chore: bump wasm sdk version [skip ci]"
+          git push
 
       - name: Install and build
         working-directory: sdk-js-wasm
