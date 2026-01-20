@@ -10,10 +10,6 @@ on:
       - 'server/**'
   workflow_dispatch:
     inputs:
-      bump_version:
-        description: 'Bump version number (e.g., v3.8.3-kids.0 -> v3.8.3-kids.1)'
-        type: boolean
-        default: false
       image_tag:
         description: 'Docker image tag (e.g., 202511, default: current default branch name)'
         type: string
@@ -26,10 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ssh-key: ${{ inputs.bump_version && secrets.DEPLOY_KEY || '' }}
+          ssh-key: ${{ inputs.image_tag && secrets.DEPLOY_KEY || '' }}
 
       - name: Bump version
-        if: inputs.bump_version
+        if: inputs.image_tag
         run: |
           VERSION=$(cat server/version/version | tr -d '\n')
           # Extract the number after 'kids.' and increment it
@@ -40,14 +36,16 @@ jobs:
           echo "$NEW_VERSION" > server/version/version
           echo "Bumped version: $VERSION -> $NEW_VERSION"
 
-      - name: Commit version bump
-        if: inputs.bump_version
+      - name: Commit version bump and tag
+        if: inputs.image_tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add server/version/version
           git commit -m "chore: bump server version"
+          git tag "v${{ inputs.image_tag }}"
           git push
+          git push origin "v${{ inputs.image_tag }}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
