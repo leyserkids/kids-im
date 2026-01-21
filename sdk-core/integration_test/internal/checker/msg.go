@@ -2,6 +2,7 @@ package checker
 
 import (
 	"context"
+
 	"github.com/openimsdk/openim-sdk-core/v3/integration_test/internal/config"
 	"github.com/openimsdk/openim-sdk-core/v3/integration_test/internal/pkg/utils"
 	"github.com/openimsdk/openim-sdk-core/v3/integration_test/internal/sdk"
@@ -65,7 +66,9 @@ func CheckMessageNum(ctx context.Context) error {
 			userNum := utils.MustGetUserNum(userID)
 			if utils.IsSuperUser(userID) {
 				res += corrects[0]
-				res += vars.UserNum - 1 - userNum // become friend notification message num
+				// see https://github.com/leyserkids/kids-im/pull/9
+				// do not send notification while add friend.
+				// res += vars.UserNum - 1 - userNum // become friend notification message num
 				if userNum < vars.LoginUserNum {
 					// friend send message num
 					res += vars.SingleMessageNum * (vars.LoginUserNum - 1)

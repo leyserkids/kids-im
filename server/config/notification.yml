@@ -200,17 +200,17 @@ friendApplicationAdded:
   reliabilityLevel: 1
   unreadCount: false
   offlinePush:
-    enable: true
+    enable: false
     title: Somebody applies to add you as a friend
     desc: Somebody applies to add you as a friend
     ext: Somebody applies to add you as a friend
 
 friendApplicationApproved:
-  isSendMsg: true
+  isSendMsg: false
   reliabilityLevel: 1
   unreadCount: false
   offlinePush:
-    enable: true
+    enable: false
     title: Someone applies to add your friend application
     desc: Someone applies to add your friend application
     ext: Someone applies to add your friend application
@@ -220,7 +220,7 @@ friendApplicationRejected:
   reliabilityLevel: 1
   unreadCount: false
   offlinePush:
-    enable: true
+    enable: false
     title: Someone rejected your friend application
     desc: Someone rejected your friend application
     ext: Someone rejected your friend application
