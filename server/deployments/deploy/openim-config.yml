@@ -653,11 +653,11 @@ data:
         ext: Somebody applies to add you as a friend
 
     friendApplicationApproved:
-      isSendMsg: true
+      isSendMsg: false
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: Someone applies to add your friend application
         desc: Someone applies to add your friend application
         ext: Someone applies to add your friend application
@@ -667,7 +667,7 @@ data:
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: Someone rejected your friend application
         desc: Someone rejected your friend application
         ext: Someone rejected your friend application
@@ -677,7 +677,7 @@ data:
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: We have become friends
         desc: We have become friends
         ext: We have become friends
@@ -687,7 +687,7 @@ data:
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: deleted a friend
         desc: deleted a friend
         ext: deleted a friend
@@ -697,7 +697,7 @@ data:
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: Your friend's profile has been changed
         desc: Your friend's profile has been changed
         ext: Your friend's profile has been changed
@@ -707,7 +707,7 @@ data:
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: blocked a user
         desc: blocked a user
         ext: blocked a user
@@ -717,7 +717,7 @@ data:
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: Remove a blocked user
         desc: Remove a blocked user
         ext: Remove a blocked user
@@ -727,7 +727,7 @@ data:
       reliabilityLevel: 1
       unreadCount: false
       offlinePush:
-        enable: true
+        enable: false
         title: friend info updated
         desc: friend info updated
         ext: friend info updated
