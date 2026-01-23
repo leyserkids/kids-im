@@ -31,7 +31,7 @@ type User interface {
 	TakeByNickname(ctx context.Context, nickname string) (user []*model.User, err error)
 	Page(ctx context.Context, pagination pagination.Pagination) (count int64, users []*model.User, err error)
 	PageFindUser(ctx context.Context, level1 int64, level2 int64, pagination pagination.Pagination) (count int64, users []*model.User, err error)
-	PageFindUserWithKeyword(ctx context.Context, level1 int64, level2 int64, userID, nickName string, pagination pagination.Pagination) (count int64, users []*model.User, err error)
+	PageFindUserWithKeyword(ctx context.Context, level1 int64, level2 int64, userID, nickName, ex string, pagination pagination.Pagination) (count int64, users []*model.User, err error)
 	Exist(ctx context.Context, userID string) (exist bool, err error)
 	GetAllUserID(ctx context.Context, pagination pagination.Pagination) (count int64, userIDs []string, err error)
 	GetUserGlobalRecvMsgOpt(ctx context.Context, userID string) (opt int, err error)

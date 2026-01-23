@@ -46,7 +46,7 @@ type UserDatabase interface {
 	// FindUser
 	PageFindUser(ctx context.Context, level1 int64, level2 int64, pagination pagination.Pagination) (count int64, users []*model.User, err error)
 	// FindUser with keyword
-	PageFindUserWithKeyword(ctx context.Context, level1 int64, level2 int64, userID string, nickName string, pagination pagination.Pagination) (count int64, users []*model.User, err error)
+	PageFindUserWithKeyword(ctx context.Context, level1 int64, level2 int64, userID, nickName, ex string, pagination pagination.Pagination) (count int64, users []*model.User, err error)
 	// Page If not found, no error is returned
 	Page(ctx context.Context, pagination pagination.Pagination) (count int64, users []*model.User, err error)
 	// IsExist true as long as one exists
@@ -170,8 +170,8 @@ func (u *userDatabase) PageFindUser(ctx context.Context, level1 int64, level2 in
 	return u.userDB.PageFindUser(ctx, level1, level2, pagination)
 }
 
-func (u *userDatabase) PageFindUserWithKeyword(ctx context.Context, level1 int64, level2 int64, userID, nickName string, pagination pagination.Pagination) (count int64, users []*model.User, err error) {
-	return u.userDB.PageFindUserWithKeyword(ctx, level1, level2, userID, nickName, pagination)
+func (u *userDatabase) PageFindUserWithKeyword(ctx context.Context, level1 int64, level2 int64, userID, nickName, ex string, pagination pagination.Pagination) (count int64, users []*model.User, err error) {
+	return u.userDB.PageFindUserWithKeyword(ctx, level1, level2, userID, nickName, ex, pagination)
 }
 
 // IsExist Does userIDs exist? As long as there is one, it will be true.
