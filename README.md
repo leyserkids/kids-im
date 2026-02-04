@@ -58,10 +58,10 @@ go mod tidy
 ### 构建 SDK
 ```bash
 # 开发时，使用下面的命令会自动构建 wasm + js lib 并复制到前端 node_modules 下
-# 注意要先配置环境变量 PROJECT_PATH_FUJI_FRONTEND
+# 注意: 要先配置环境变量 PROJECT_PATH_FUJI_FRONTEND
 cd sdk-js-wasm
-npm install    # 安装依赖
-npm run sync
+npm install  # 安装依赖
+npm run sync # 执行后，若前端不生效，在前端 im 目录下执行 `rm -rf node_modules/.vite` 来删除 vite 缓存，并重启 vite
 
 # ==== 下面用于测试构建 ====
 # 构建 wasm
