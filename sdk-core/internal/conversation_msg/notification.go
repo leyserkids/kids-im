@@ -239,38 +239,33 @@ func (c *Conversation) doUpdateConversation(c2v common.Cmd2Value) {
 			c.ConversationListener().OnTotalUnreadMessageCountChanged(totalUnreadCount)
 		}
 	case constant.UpdateConFaceUrlAndNickName:
-		var lc model_struct.LocalConversation
 		st := node.Args.(common.SourceIDAndSessionType)
 		log.ZInfo(ctx, "UpdateConFaceUrlAndNickName", "st", st)
+		var conversationID string
 		switch st.SessionType {
 		case constant.SingleChatType:
-			lc.UserID = st.SourceID
-			lc.ConversationID = c.getConversationIDBySessionType(st.SourceID, constant.SingleChatType)
-			lc.ConversationType = constant.SingleChatType
+			conversationID = c.getConversationIDBySessionType(st.SourceID, constant.SingleChatType)
 		case constant.ReadGroupChatType:
-			conversationID, conversationType, err := c.getConversationTypeByGroupID(ctx, st.SourceID)
+			cID, _, err := c.getConversationTypeByGroupID(ctx, st.SourceID)
 			if err != nil {
 				return
 			}
-			lc.GroupID = st.SourceID
-			lc.ConversationID = conversationID
-			lc.ConversationType = conversationType
+			conversationID = cID
 		case constant.NotificationChatType:
-			lc.UserID = st.SourceID
-			lc.ConversationID = c.getConversationIDBySessionType(st.SourceID, constant.NotificationChatType)
-			lc.ConversationType = constant.NotificationChatType
+			conversationID = c.getConversationIDBySessionType(st.SourceID, constant.NotificationChatType)
 		default:
 			log.ZError(ctx, "not support sessionType", nil, "sessionType", st.SessionType)
 			return
 		}
-		lc.ShowName = st.Nickname
-		lc.FaceURL = st.FaceURL
-		err := c.db.UpdateConversation(ctx, &lc)
+		err := c.db.UpdateColumnsConversation(ctx, conversationID, map[string]interface{}{
+			"face_url":  st.FaceURL,
+			"show_name": st.Nickname,
+		})
 		if err != nil {
-			// log.Error("internal", "setConversationFaceUrlAndNickName database err:", err.Error())
+			log.ZWarn(ctx, "UpdateConFaceUrlAndNickName UpdateColumnsConversation err", err, "conversationID", conversationID)
 			return
 		}
-		c.doUpdateConversation(common.Cmd2Value{Value: common.UpdateConNode{ConID: lc.ConversationID, Action: constant.ConChange, Args: []string{lc.ConversationID}}})
+		c.doUpdateConversation(common.Cmd2Value{Value: common.UpdateConNode{ConID: conversationID, Action: constant.ConChange, Args: []string{conversationID}}})
 
 	case constant.UpdateLatestMessageReadState:
 		conversationID := node.ConID
