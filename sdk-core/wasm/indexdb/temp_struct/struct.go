@@ -45,7 +45,7 @@ type LocalConversation struct {
 	UserID                string ` json:"userID,omitempty"`
 	GroupID               string ` json:"groupID,omitempty"`
 	ShowName              string ` json:"showName,omitempty"`
-	FaceURL               string ` json:"faceURL"`
+	FaceURL               string ` json:"faceURL,omitempty"`
 	RecvMsgOpt            int32  ` json:"recvMsgOpt,omitempty"`
 	UnreadCount           int32  ` json:"unreadCount,omitempty"`
 	GroupAtType           int32  ` json:"groupAtType,omitempty"`
