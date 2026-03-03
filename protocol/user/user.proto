@@ -125,6 +125,7 @@ message getPaginationUsersReq {
   sdkws.RequestPagination pagination = 2;
   string userID = 3;
   string nickName = 4;
+  optional string ex = 5;  // Filter by ex field (exact match)
 }
 
 message getPaginationUsersResp {

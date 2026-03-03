@@ -96,6 +96,7 @@ func (u *UserMgo) PageFindUserWithKeyword(
 	level2 int64,
 	userID string,
 	nickName string,
+	ex string,
 	pagination pagination.Pagination,
 ) (count int64, users []*model.User, err error) {
 	// Initialize the base query with level conditions
@@ -119,6 +120,11 @@ func (u *UserMgo) PageFindUserWithKeyword(
 			userConditions = append(userConditions, bson.M{"nickname": regexPattern})
 		}
 		query["$and"] = append(query["$and"].([]bson.M), bson.M{"$or": userConditions})
+	}
+
+	// Add ex condition if provided (exact match)
+	if ex != "" {
+		query["$and"] = append(query["$and"].([]bson.M), bson.M{"ex": ex})
 	}
 
 	// Perform the paginated search
