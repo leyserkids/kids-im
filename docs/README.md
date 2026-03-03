@@ -18,6 +18,7 @@
 | 08 | [消息保留策略](08-message-retention.md) | minSeq 机制、时间/数量限制、Cron 清理 |
 | 09 | [消息已读设计](09-read-receipt.md) | ReadCursor、allReadSeq、已读回执同步 |
 | 10 | [免打扰设计](10-do-not-disturb.md) | DND 过滤、@mention 绕过、Webhook 层实现 |
+| 11 | [定时清理任务实现细节](11-crontask-cleanup-detail.md) | msg/S3 删除机制、引用计数、随机采样策略 |
 
 ---
 
